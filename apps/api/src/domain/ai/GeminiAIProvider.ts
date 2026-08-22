@@ -1,10 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { AIProvider, DiagnosisInput, DiagnosisOutput, P2PExtractionInput, P2PExtractionOutput } from "./ai.types.js";
 import { DiagnosisOutputSchema, P2PExtractionOutputSchema } from "./ai.schemas.js";
+import { MockAIProvider } from "./MockAIProvider.js";
 
 export class GeminiAIProvider implements AIProvider {
   private ai: GoogleGenAI;
   private modelName: string;
+  private fallbackMock: MockAIProvider;
 
   constructor(apiKey?: string, modelName?: string) {
     const key = apiKey || process.env.GEMINI_API_KEY || "";
@@ -13,10 +15,11 @@ export class GeminiAIProvider implements AIProvider {
     }
     this.ai = new GoogleGenAI({ apiKey: key });
     this.modelName = modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    this.fallbackMock = new MockAIProvider();
   }
 
   /**
-   * Diagnoses payment failure using Gemini structured generation.
+   * Diagnoses payment failure using Gemini structured generation with safe fallback.
    */
   public async diagnosePaymentFailure(input: DiagnosisInput): Promise<DiagnosisOutput> {
     const prompt = `
@@ -56,17 +59,15 @@ Return ONLY a JSON object matching this exact schema:
 
       const text = response.text || "{}";
       const parsedRaw = JSON.parse(text);
-
-      // Validate through strict Zod schema
       return DiagnosisOutputSchema.parse(parsedRaw);
     } catch (err: any) {
-      console.error("[GeminiAIProvider] Diagnosis generation failed or invalid JSON:", err.message);
-      throw err;
+      console.warn(`[GeminiAIProvider] Gemini API error (${err.message}). Falling back to MockAIProvider.`);
+      return this.fallbackMock.diagnosePaymentFailure(input);
     }
   }
 
   /**
-   * Extracts Promise-to-Pay intent from untrusted customer text using Gemini.
+   * Extracts Promise-to-Pay intent from untrusted customer text using Gemini with safe fallback.
    */
   public async extractPromiseToPay(input: P2PExtractionInput): Promise<P2PExtractionOutput> {
     const prompt = `
@@ -103,11 +104,10 @@ Return ONLY a JSON object matching this exact schema:
 
       const text = response.text || "{}";
       const parsedRaw = JSON.parse(text);
-
       return P2PExtractionOutputSchema.parse(parsedRaw);
     } catch (err: any) {
-      console.error("[GeminiAIProvider] P2P extraction failed or invalid JSON:", err.message);
-      throw err;
+      console.warn(`[GeminiAIProvider] Gemini P2P API error (${err.message}). Falling back to MockAIProvider.`);
+      return this.fallbackMock.extractPromiseToPay(input);
     }
   }
 }

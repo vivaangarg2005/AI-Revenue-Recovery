@@ -16,8 +16,11 @@ export function getRedisClient(): Redis {
       lazyConnect: true,
     });
 
-    redisClient.on("error", (err) => {
-      console.error("⚠️ Redis Client Error:", err.message);
+    redisClient.on("error", (err: any) => {
+      // Suppress repetitive ECONNREFUSED logs in offline mock mode
+      if (err.code !== "ECONNREFUSED" && err.code !== "ENOTFOUND") {
+        console.error("⚠️ Redis Client Error:", err.message);
+      }
     });
   }
   return redisClient;

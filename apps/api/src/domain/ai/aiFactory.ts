@@ -12,8 +12,10 @@ export function getAIProvider(): AIProvider {
 
   const mode = (process.env.AI_MODE || "mock").toLowerCase();
   const geminiKey = process.env.GEMINI_API_KEY;
+  const isVitest = !!process.env.VITEST || process.env.NODE_ENV === "test";
 
-  if ((mode === "gemini" || mode === "auto") && geminiKey) {
+  // Automated tests and batch simulations strictly use MockAIProvider to avoid rate limits
+  if (mode === "gemini" && geminiKey && !isVitest) {
     try {
       cachedProvider = new GeminiAIProvider(geminiKey);
       currentProviderName = "Gemini";
@@ -26,7 +28,6 @@ export function getAIProvider(): AIProvider {
 
   cachedProvider = new MockAIProvider();
   currentProviderName = "Mock";
-  console.log(`[AIFactory] Initialized MockAIProvider ($0 cost mock mode).`);
   return cachedProvider;
 }
 

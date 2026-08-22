@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@recover-ai/shared && npm run dev --workspaces --if-present",
+    "dev": "npm run build --workspace=@recover-ai/shared && npm run dev --workspace=@recover-ai/api & npm run dev --workspace=@recover-ai/web",
     "build": "npm run build --workspace=@recover-ai/shared && npm run build --workspace=@recover-ai/api && npm run build --workspace=@recover-ai/web",
     "test": "npx vitest run",
     "test:watch": "npx vitest",

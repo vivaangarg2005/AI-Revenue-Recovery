@@ -7,7 +7,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "npx --no-install tsc",
-    "dev": "npx --no-install tsc --watch"
+    "dev": "npx --no-install tsc"
   },
   "dependencies": {
     "zod": "^3.23.8"

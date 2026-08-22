@@ -41,7 +41,11 @@ healthRouter.get("/health", async (req: Request, res: Response) => {
   };
 
   const validatedResponse = HealthCheckResponseSchema.parse(responsePayload);
-  const statusCode = overallStatus === "down" ? 503 : 200;
+  const isMock = process.env.AI_MODE === "mock" || process.env.PAYMENT_PROVIDER_MODE === "mock";
+  const statusCode = (overallStatus === "down" && !isMock) ? 503 : 200;
 
-  res.status(statusCode).json(validatedResponse);
+  res.status(statusCode).json({
+    ...validatedResponse,
+    mockMode: isMock,
+  });
 });

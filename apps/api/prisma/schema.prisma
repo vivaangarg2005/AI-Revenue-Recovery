@@ -1,0 +1,388 @@
+// apps/api/prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum CustomerTier {
+  STANDARD
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  HALTED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  EXPIRED
+}
+
+enum FSMState {
+  FAILED
+  DIAGNOSING
+  DIAGNOSED
+  ACTION_AUTHORIZED
+  AWAITING_PAYMENT
+  P2P_PAUSED
+  PAID
+  HALTED
+  ESCALATED
+  POLICY_BLOCKED
+  TERMINATED_OPT_OUT
+}
+
+enum DecisionType {
+  ALLOW
+  DENY
+}
+
+enum AttemptStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum EscalationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// -----------------------------------------------------------------------------
+// CORE DOMAIN MODELS
+// -----------------------------------------------------------------------------
+
+model Customer {
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  phone        String
+  tier         CustomerTier   @default(STANDARD)
+  isOptedOut   Boolean        @default(false)
+  timezone     String         @default("Asia/Kolkata")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  Subscription Subscription[]
+
+  @@map("customers")
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  customerId             String             @map("customer_id")
+  customer               Customer           @relation(fields: [customerId], references: [id])
+  razorpaySubscriptionId String?            @unique @map("razorpay_subscription_id")
+  planName               String             @map("plan_name")
+  amountPaise            BigInt             @map("amount_paise") // Integer Paise
+  status                 SubscriptionStatus @default(ACTIVE)
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+  Invoice                Invoice[]
+  RecoveryCase           RecoveryCase[]
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id                String           @id @default(uuid())
+  subscriptionId    String           @map("subscription_id")
+  subscription      Subscription     @relation(fields: [subscriptionId], references: [id])
+  razorpayInvoiceId String?          @unique @map("razorpay_invoice_id")
+  amountDuePaise    BigInt           @map("amount_due_paise") // Integer Paise
+  amountPaidPaise   BigInt           @default(0) @map("amount_paid_paise")
+  status            InvoiceStatus    @default(ISSUED)
+  dueDate           DateTime         @map("due_date")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  PaymentAttempt    PaymentAttempt[]
+  RecoveryCase      RecoveryCase?
+
+  @@map("invoices")
+}
+
+model PaymentAttempt {
+  id                String         @id @default(uuid())
+  invoiceId         String         @map("invoice_id")
+  invoice           Invoice        @relation(fields: [invoiceId], references: [id])
+  attemptNumber     Int            @map("attempt_number")
+  amountPaise       BigInt         @map("amount_paise")
+  provider          String         @default("RAZORPAY")
+  razorpayPaymentId String?        @map("razorpay_payment_id")
+  idempotencyKey    String         @unique @map("idempotency_key")
+  status            AttemptStatus  @default(PENDING)
+  failureReason     String?        @map("failure_reason")
+  requestedAt       DateTime       @default(now()) @map("requested_at")
+  completedAt       DateTime?      @map("completed_at")
+  FailureEvent      FailureEvent[]
+
+  @@unique([invoiceId, attemptNumber])
+  @@map("payment_attempts")
+}
+
+model FailureEvent {
+  id                 String          @id @default(uuid())
+  caseId             String          @map("case_id")
+  recoveryCase       RecoveryCase    @relation(fields: [caseId], references: [id])
+  paymentAttemptId   String?         @map("payment_attempt_id")
+  paymentAttempt     PaymentAttempt? @relation(fields: [paymentAttemptId], references: [id])
+  rawProviderCode    String?         @map("raw_provider_code")
+  normalizedCategory String          @map("normalized_category")
+  occurredAt         DateTime        @default(now()) @map("occurred_at")
+
+  @@map("failure_events")
+}
+
+model RecoveryCase {
+  id                 String           @id @default(uuid())
+  subscriptionId     String           @map("subscription_id")
+  subscription       Subscription     @relation(fields: [subscriptionId], references: [id])
+  invoiceId          String           @unique @map("invoice_id")
+  invoice            Invoice          @relation(fields: [invoiceId], references: [id])
+  amountDuePaise     BigInt           @map("amount_due_paise")
+  recoveredPaise     BigInt           @default(0) @map("recovered_paise")
+  fsmState           FSMState         @default(FAILED) @map("fsm_state")
+  retryCount         Int              @default(0) @map("retry_count")
+  brokenPromiseCount Int              @default(0) @map("broken_promise_count")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  FailureEvent       FailureEvent[]
+  AIDiagnosis        AIDiagnosis[]
+  P2PCommitment      P2PCommitment[]
+  RecoveryAction     RecoveryAction[]
+  PolicyDecision     PolicyDecision[]
+  FSMTransition      FSMTransition[]
+  AuditEvent         AuditEvent[]
+  Communication      Communication[]
+  Escalation         Escalation?
+
+  @@index([fsmState])
+  @@map("recovery_cases")
+}
+
+model AIDiagnosis {
+  id                   String       @id @default(uuid())
+  caseId               String       @map("case_id")
+  recoveryCase         RecoveryCase @relation(fields: [caseId], references: [id])
+  modelName            String       @map("model_name")
+  schemaVersion        String       @map("schema_version")
+  rootCause            String       @map("root_cause")
+  confidence           Float
+  recommendedStrategy  String       @map("recommended_strategy")
+  recommendedDelayDays Int          @map("recommended_delay_days")
+  primaryReasoning     String       @map("primary_reasoning")
+  createdAt            DateTime     @default(now()) @map("created_at")
+
+  @@map("ai_diagnoses")
+}
+
+model P2PCommitment {
+  id                 String       @id @default(uuid())
+  caseId             String       @map("case_id")
+  recoveryCase       RecoveryCase @relation(fields: [caseId], references: [id])
+  rawCustomerMessage String       @map("raw_customer_message")
+  intent             String
+  confidence         Float
+  promisedIsoDate    DateTime?    @map("promised_iso_date")
+  status             String       @default("PENDING") // PENDING, FULFILLED, BROKEN
+  bullmqJobId        String?      @map("bullmq_job_id")
+  createdAt          DateTime     @default(now()) @map("created_at")
+
+  @@map("p2p_commitments")
+}
+
+model RecoveryAction {
+  id               String          @id @default(uuid())
+  caseId           String          @map("case_id")
+  recoveryCase     RecoveryCase    @relation(fields: [caseId], references: [id])
+  actionType       String          @map("action_type")
+  parameters       Json
+  policyDecisionId String?         @unique @map("policy_decision_id")
+  policyDecision   PolicyDecision? @relation(fields: [policyDecisionId], references: [id])
+  executionStatus  String          @default("PROPOSED") @map("execution_status")
+  idempotencyKey   String          @unique @map("idempotency_key")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  @@map("recovery_actions")
+}
+
+model PolicyDecision {
+  id                  String          @id @default(uuid())
+  caseId              String          @map("case_id")
+  recoveryCase        RecoveryCase    @relation(fields: [caseId], references: [id])
+  decision            DecisionType
+  policyId            String          @map("policy_id")
+  violations          Json            @default("[]")
+  policySignatureHash String          @map("policy_signature_hash")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  RecoveryAction      RecoveryAction?
+
+  @@map("policy_decisions")
+}
+
+model FSMTransition {
+  id            String       @id @default(uuid())
+  caseId        String       @map("case_id")
+  recoveryCase  RecoveryCase @relation(fields: [caseId], references: [id])
+  fromState     FSMState     @map("from_state")
+  toState       FSMState     @map("to_state")
+  trigger       String
+  actor         String       @default("SYSTEM")
+  correlationId String       @map("correlation_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@map("fsm_transitions")
+}
+
+model WebhookEvent {
+  id            String    @id @default(uuid())
+  provider      String    @default("RAZORPAY")
+  eventId       String    @unique @map("event_id")
+  eventType     String    @map("event_type")
+  isVerified    Boolean   @default(false) @map("is_verified")
+  payload       Json
+  payloadHash   String    @map("payload_hash")
+  status        String    @default("RECEIVED") // RECEIVED, PROCESSED, FAILED
+  correlationId String    @map("correlation_id")
+  receivedAt    DateTime  @default(now()) @map("received_at")
+  processedAt   DateTime? @map("processed_at")
+
+  @@map("webhook_events")
+}
+
+model IdempotencyRecord {
+  idempotencyKey String    @id @map("idempotency_key")
+  operationType  String    @map("operation_type")
+  resourceId     String    @map("resource_id")
+  requestHash    String    @map("request_hash")
+  status         String    @default("RESERVED")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  expiresAt      DateTime? @map("expires_at")
+
+  @@map("idempotency_records")
+}
+
+model AuditEvent {
+  id            String        @id @default(uuid())
+  caseId        String?       @map("case_id")
+  recoveryCase  RecoveryCase? @relation(fields: [caseId], references: [id])
+  eventType     String        @map("event_type")
+  actor         String        // SYSTEM, LLM_AGENT, POLICY_ENGINE, HUMAN
+  payload       Json
+  previousHash  String        @map("previous_hash")
+  currentHash   String        @map("current_hash")
+  correlationId String        @map("correlation_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  @@index([caseId])
+  @@index([correlationId])
+  @@map("audit_events")
+}
+
+model Communication {
+  id                String       @id @default(uuid())
+  caseId            String       @map("case_id")
+  recoveryCase      RecoveryCase @relation(fields: [caseId], references: [id])
+  channel           String       // WHATSAPP, SMS, EMAIL
+  template          String
+  status            String       @default("QUEUED") // QUEUED, SENT, DELIVERED, FAILED
+  providerMessageId String?      @map("provider_message_id")
+  sentAt            DateTime?    @map("sent_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  @@map("communications")
+}
+
+model Escalation {
+  id            String             @id @default(uuid())
+  caseId        String             @unique @map("case_id")
+  recoveryCase  RecoveryCase       @relation(fields: [caseId], references: [id])
+  reason        String
+  priority      EscalationPriority @default(HIGH)
+  assignedAgent String?            @map("assigned_agent")
+  status        String             @default("OPEN") // OPEN, IN_REVIEW, RESOLVED
+  createdAt     DateTime           @default(now()) @map("created_at")
+  resolvedAt    DateTime?          @map("resolved_at")
+
+  @@map("escalations")
+}
+
+// -----------------------------------------------------------------------------
+// BATCH SIMULATION & COUNTERFACTUAL MODELS
+// -----------------------------------------------------------------------------
+
+model SimulationRun {
+  id               String             @id @default(uuid())
+  seed             Int
+  totalCases       Int                @map("total_cases")
+  status           String             @default("PENDING") // PENDING, RUNNING, COMPLETED
+  createdAt        DateTime           @default(now()) @map("created_at")
+  completedAt      DateTime?          @map("completed_at")
+  SimulationCase   SimulationCase[]
+  ExperimentResult ExperimentResult?
+  FailureInjection FailureInjection[]
+
+  @@map("simulation_runs")
+}
+
+model SimulationCase {
+  id                  String        @id @default(uuid())
+  simulationRunId     String        @map("simulation_run_id")
+  simulationRun       SimulationRun @relation(fields: [simulationRunId], references: [id])
+  syntheticCustomerId String        @map("synthetic_customer_id")
+  cohort              String        // CONTROL, TREATMENT
+  failureCategory     String        @map("failure_category")
+  amountPaise         BigInt        @map("amount_paise")
+  expectedOutcome     String        @map("expected_outcome")
+  actualOutcome       String        @map("actual_outcome")
+  recoveredPaise      BigInt        @default(0) @map("recovered_paise")
+  createdAt           DateTime      @default(now()) @map("created_at")
+
+  @@map("simulation_cases")
+}
+
+model ExperimentResult {
+  id                      String        @id @default(uuid())
+  simulationRunId         String        @unique @map("simulation_run_id")
+  simulationRun           SimulationRun @relation(fields: [simulationRunId], references: [id])
+  controlSampleCount      Int           @map("control_sample_count")
+  treatmentSampleCount    Int           @map("treatment_sample_count")
+  controlRiskPaise        BigInt        @map("control_risk_paise")
+  treatmentRiskPaise      BigInt        @map("treatment_risk_paise")
+  controlRecoveredPaise   BigInt        @map("control_recovered_paise")
+  treatmentRecoveredPaise BigInt        @map("treatment_recovered_paise")
+  controlRecoveryRate     Float         @map("control_recovery_rate")
+  treatmentRecoveryRate   Float         @map("treatment_recovery_rate")
+  netRoiIncreasePaise     BigInt        @map("net_roi_increase_paise")
+  createdAt               DateTime      @default(now()) @map("created_at")
+
+  @@map("experiment_results")
+}
+
+model FailureInjection {
+  id              String        @id @default(uuid())
+  simulationRunId String        @map("simulation_run_id")
+  simulationRun   SimulationRun @relation(fields: [simulationRunId], references: [id])
+  targetCaseId    String        @map("target_case_id")
+  failureType     String        @map("failure_type")
+  parameters      Json
+  observedResult  String        @map("observed_result")
+  passed          Boolean       @default(true)
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@map("failure_injections")
+}

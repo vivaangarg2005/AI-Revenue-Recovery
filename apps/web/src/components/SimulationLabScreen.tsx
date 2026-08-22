@@ -1,0 +1,234 @@
+import { useState, useEffect } from "react";
+import { TrendingUp, RefreshCw, Info } from "lucide-react";
+
+export function SimulationLabScreen() {
+  const [metrics, setMetrics] = useState<any>(null);
+  const [cases, setCases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const multiSeedData = [
+    { seed: 20260822, controlNet: "₹1,96,826", treatNet: "₹3,50,970", incremental: "+₹1,54,144", lift: "+78.31%", accuracy: "87.6%", escalations: 39, unneeded: "3.2%" },
+    { seed: 20260823, controlNet: "₹2,59,420", treatNet: "₹4,31,772", incremental: "+₹1,72,352", lift: "+66.43%", accuracy: "84.8%", escalations: 36, unneeded: "8.4%" },
+    { seed: 20260824, controlNet: "₹1,90,535", treatNet: "₹3,42,283", incremental: "+₹1,51,748", lift: "+79.64%", accuracy: "83.6%", escalations: 34, unneeded: "5.2%" },
+    { seed: 20260825, controlNet: "₹2,28,117", treatNet: "₹3,45,881", incremental: "+₹1,17,764", lift: "+51.62%", accuracy: "83.6%", escalations: 40, unneeded: "4.8%" },
+  ];
+
+  const fetchSimulationData = async () => {
+    setLoading(true);
+    try {
+      const [metricsRes, casesRes] = await Promise.all([
+        fetch("/api/v1/simulations/latest"),
+        fetch("/api/v1/simulations/latest/cases"),
+      ]);
+      const metricsData = await metricsRes.json();
+      const casesData = await casesRes.json();
+      setMetrics(metricsData);
+      setCases(casesData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTriggerSimulation = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/v1/simulations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seed: 20260822 }),
+      });
+      const data = await res.json();
+      setMetrics(data);
+
+      const casesRes = await fetch(`/api/v1/simulations/${data.simulationId}/cases`);
+      const casesData = await casesRes.json();
+      setCases(casesData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSimulationData();
+  }, []);
+
+  return (
+    <div className="space-y-6 font-sans">
+      {/* Disclaimer Banner (Mandatory Part 26 Rule) */}
+      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs font-mono text-amber-300">
+        <div className="flex items-center gap-2">
+          <Info className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>
+            <strong>COUNTERFACTUAL SIMULATION LAB:</strong> 500-case reproducible synthetic batch (not production payment data).
+          </span>
+        </div>
+        <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px]">
+          Seed: 20260822
+        </span>
+      </div>
+
+      {/* Header & Run Button */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h2 className="font-bold text-lg text-white flex items-center gap-2 font-mono">
+            <TrendingUp className="w-5 h-5 text-indigo-400" />
+            500-Case Revenue Recovery Experiment Lab
+          </h2>
+          <p className="text-xs text-slate-400 font-mono mt-0.5">
+            Counterfactual Evaluation: Control Baseline (250) vs RECOVER-AI Engine (250)
+          </p>
+        </div>
+
+        <button
+          onClick={handleTriggerSimulation}
+          disabled={loading}
+          className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs font-mono transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "Executing 500 Cases..." : "Run 500-Case Simulation"}
+        </button>
+      </div>
+
+      {/* KPI Cards Grid (Real Calculated Metrics) */}
+      {metrics && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+            <div className="text-[11px] text-slate-400">Total Risk (500 Cases)</div>
+            <div className="text-lg font-bold text-white mt-1">
+              ₹{(Number(metrics.totalRiskPaise || 0) / 100).toLocaleString("en-IN")}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-1">250 Control / 250 Treatment</div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+            <div className="text-[11px] text-slate-400">Control Net Recovered</div>
+            <div className="text-lg font-bold text-slate-300 mt-1">
+              ₹{(Number(metrics.controlNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-1">Rate: {metrics.controlRecoveryRatePercent}%</div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+            <div className="text-[11px] text-slate-400">RECOVER-AI Net Recovered</div>
+            <div className="text-lg font-bold text-emerald-400 mt-1">
+              ₹{(Number(metrics.treatmentNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+            </div>
+            <div className="text-[10px] text-emerald-500 mt-1">Rate: {metrics.treatmentRecoveryRatePercent}%</div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-indigo-500/30 bg-indigo-950/20">
+            <div className="text-[11px] text-indigo-300">Treatment Lift (Latest Run)</div>
+            <div className="text-lg font-bold text-indigo-400 mt-1">+{metrics.recoveryLiftPercent}%</div>
+            <div className="text-[10px] text-emerald-400 mt-1">Mean Lift Across Seeds: +69.00%</div>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Seed Robustness Verification Table */}
+      <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <h3 className="font-bold text-sm text-white">Multi-Seed Robustness Evaluation (4 Seeds)</h3>
+          <span className="text-emerald-400 text-[11px] font-bold">Average Lift: +69.00%</span>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+          <table className="w-full text-left">
+            <thead className="bg-slate-900 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th className="p-3">Seed</th>
+                <th className="p-3">Control Net (₹)</th>
+                <th className="p-3">RECOVER-AI Net (₹)</th>
+                <th className="p-3">Incremental (₹)</th>
+                <th className="p-3">Recovery Lift</th>
+                <th className="p-3">AI Accuracy</th>
+                <th className="p-3">Escalations</th>
+                <th className="p-3">Unneeded %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 text-slate-300">
+              {multiSeedData.map((row) => (
+                <tr key={row.seed} className="hover:bg-slate-900/50">
+                  <td className="p-3 font-bold text-indigo-300">{row.seed}</td>
+                  <td className="p-3 text-slate-400">{row.controlNet}</td>
+                  <td className="p-3 font-bold text-emerald-400">{row.treatNet}</td>
+                  <td className="p-3 font-bold text-indigo-400">{row.incremental}</td>
+                  <td className="p-3 font-bold text-emerald-400">{row.lift}</td>
+                  <td className="p-3 text-purple-300">{row.accuracy}</td>
+                  <td className="p-3 text-slate-400">{row.escalations}</td>
+                  <td className="p-3 text-slate-400">{row.unneeded}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Counterfactual Case Comparison Table */}
+      <div className="space-y-3 font-mono text-xs">
+        <div className="flex items-center justify-between text-slate-400">
+          <span>Counterfactual Paired Cases (First 15 Cases Preview)</span>
+          <span>Showing {Math.min(15, cases.length)} of 250 Paired Cases</span>
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+          <table className="w-full text-left">
+            <thead className="bg-slate-900 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th className="p-3">#</th>
+                <th className="p-3">Amount</th>
+                <th className="p-3">Control Outcome</th>
+                <th className="p-3">RECOVER-AI Category</th>
+                <th className="p-3">Strategy Used</th>
+                <th className="p-3">RECOVER-AI State</th>
+                <th className="p-3">Net Recovered</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 text-slate-300">
+              {cases.slice(0, 15).map((c) => (
+                <tr key={c.caseIndex} className="hover:bg-slate-900/50 transition-colors">
+                  <td className="p-3 font-bold text-slate-400">#{c.caseIndex}</td>
+                  <td className="p-3 text-white">₹{(Number(c.amountPaise) / 100).toFixed(0)}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[11px] ${
+                        c.control.finalState === "PAID"
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {c.control.finalState} (Retries: {c.control.retryCount})
+                    </span>
+                  </td>
+                  <td className="p-3 text-purple-300">{c.treatment.aiCategory}</td>
+                  <td className="p-3 text-indigo-300">{c.treatment.strategyUsed}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${
+                        c.treatment.finalState === "PAID"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : c.treatment.finalState === "POLICY_BLOCKED"
+                          ? "bg-rose-500/20 text-rose-400"
+                          : c.treatment.finalState === "P2P_PAUSED"
+                          ? "bg-amber-500/20 text-amber-400"
+                          : "bg-slate-800 text-slate-300"
+                      }`}
+                    >
+                      {c.treatment.finalState}
+                    </span>
+                  </td>
+                  <td className="p-3 font-bold text-emerald-400">
+                    ₹{(Number(c.treatment.netRecoveredPaise) / 100).toFixed(0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

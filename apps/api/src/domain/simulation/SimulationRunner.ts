@@ -1,4 +1,4 @@
-import { MockAIProvider } from "../ai/MockAIProvider.js";
+import { getAIProvider } from "../ai/aiFactory.js";
 import { evaluatePolicy } from "../policy/policy.js";
 import { ActionType } from "../policy/policy.types.js";
 import { MockPaymentProvider } from "../payment/MockPaymentProvider.js";
@@ -7,7 +7,6 @@ import { SimulationGenerator } from "./SimulationGenerator.js";
 import { SyntheticCase, CaseOutcome, ExperimentSummaryMetrics } from "./simulation.types.js";
 
 export class SimulationRunner {
-  private static aiProvider = new MockAIProvider();
   private static paymentProvider = new MockPaymentProvider();
 
   /**
@@ -20,7 +19,7 @@ export class SimulationRunner {
   }> {
     const { controlCases, treatmentCases } = SimulationGenerator.generateBatch(seed);
     const prngControl = new PseudoRandom(seed + 100);
-    const prngTreatment = new PseudoRandom(seed + 100); // Identical PRNG stream for natural recovery fairness
+    const prngTreatment = new PseudoRandom(seed + 100);
 
     const controlOutcomes: CaseOutcome[] = [];
     const treatmentOutcomes: CaseOutcome[] = [];
@@ -57,11 +56,10 @@ export class SimulationRunner {
     let finalState = "FAILED";
 
     if (!cCase.isOptedOut) {
-      // Check 3 attempts on Day 0, Day 2, Day 4
       for (let attempt = 1; attempt <= 3; attempt++) {
         retryCount = attempt;
 
-        // Natural organic payment check
+        // Check natural organic payment on this attempt
         if (prng.next() < gt.naturalRecoveryProbability) {
           recoveredPaise = cCase.amountPaise;
           finalState = "PAID";
@@ -101,12 +99,14 @@ export class SimulationRunner {
 
   /**
    * Treatment Execution: RECOVER-AI Engine (Adaptive Diagnosis -> Policy Gatekeeper -> Bounded Cadence).
+   * ZERO GROUND-TRUTH LEAKAGE: Treatment observes ONLY failureCode, failureMessage, amountPaise, customerTier, & inbound text!
    */
   private static async runTreatmentCase(tCase: SyntheticCase, prng: PseudoRandom): Promise<CaseOutcome> {
     const gt = tCase.groundTruth;
+    const aiProvider = getAIProvider();
 
-    // STEP 1: AI Diagnosis
-    const diagnosis = await this.aiProvider.diagnosePaymentFailure({
+    // STEP 1: AI Diagnosis (Observes ONLY public payment failure data - NO ground truth fields)
+    const diagnosis = await aiProvider.diagnosePaymentFailure({
       failureCode: tCase.failureCode,
       failureMessage: tCase.failureMessage,
       amountPaise: tCase.amountPaise.toString(),
@@ -115,7 +115,7 @@ export class SimulationRunner {
 
     const isCorrectDiagnosis = diagnosis.category === gt.actualFailureCategory;
 
-    // STEP 2: Handle Opt-Out & Permanent Failure Rules
+    // STEP 2: Handle Opt-Out & AI Recommended Escalation
     if (tCase.isOptedOut) {
       return {
         caseId: tCase.id,
@@ -139,8 +139,8 @@ export class SimulationRunner {
       };
     }
 
-    if (gt.actualFailureCategory === "PERMANENT_FAILURE") {
-      // Safely escalate permanent failures to human review without wasteful retries
+    if (diagnosis.category === "PERMANENT_FAILURE" || diagnosis.recommendedStrategy === "HUMAN_ESCALATION") {
+      // Escalate based on AI diagnosis result
       return {
         caseId: tCase.id,
         cohort: "TREATMENT",
@@ -163,33 +163,31 @@ export class SimulationRunner {
       };
     }
 
-    // STEP 3: Handle Inbound P2P Message if present
+    // STEP 3: Handle Inbound P2P Message if present (Untrusted customer text)
     let hasP2P = false;
     let p2pIntent: string | undefined;
-    let p2pAccepted = false;
 
     if (gt.inboundP2PMessage) {
       hasP2P = true;
-      const p2pRes = await this.aiProvider.extractPromiseToPay({ message: gt.inboundP2PMessage });
+      const p2pRes = await aiProvider.extractPromiseToPay({ message: gt.inboundP2PMessage });
       p2pIntent = p2pRes.intent;
 
       if (p2pRes.confidence >= 0.70 && (p2pRes.intent === "WILL_PAY" || p2pRes.intent === "REQUEST_DELAY")) {
-        p2pAccepted = true;
-        // P2P commitment pauses automation and leads to payment
+        // P2P commitment pauses automation without immediately counting money as recovered!
         return {
           caseId: tCase.id,
           cohort: "TREATMENT",
           initialState: "FAILED",
           finalState: "P2P_PAUSED",
           amountPaise: tCase.amountPaise,
-          recoveredPaise: tCase.amountPaise,
+          recoveredPaise: BigInt(0), // Money is NOT counted as recovered until payment succeeds
           discountCostPaise: BigInt(0),
-          netRecoveredPaise: tCase.amountPaise,
+          netRecoveredPaise: BigInt(0),
           aiDiagnosisCategory: diagnosis.category,
           aiDiagnosisConfidence: diagnosis.confidence,
           policyDecision: "ALLOW",
           strategyUsed: diagnosis.recommendedStrategy,
-          retryCount: 1,
+          retryCount: 0,
           isEscalated: false,
           isPolicyBlocked: false,
           isCorrectDiagnosis,
@@ -224,11 +222,12 @@ export class SimulationRunner {
       }
     }
 
-    // STEP 4: Adaptive Multi-Attempt Recovery Execution (up to 3 attempts budget)
+    // STEP 4: Action Mapping to ActionType
     let actionType: ActionType = ActionType.RETRY_PAYMENT;
-    if (diagnosis.recommendedStrategy === "PAYMENT_LINK") actionType = ActionType.CREATE_PAYMENT_LINK;
-    if (diagnosis.recommendedStrategy === "DISCOUNT_NUDGE") actionType = ActionType.OFFER_DISCOUNT;
-    if (diagnosis.recommendedStrategy === "HUMAN_ESCALATION") actionType = ActionType.ESCALATE;
+    const strategy = diagnosis.recommendedStrategy as string;
+    if (strategy === "PAYMENT_LINK") actionType = ActionType.CREATE_PAYMENT_LINK;
+    if (strategy === "DISCOUNT_NUDGE") actionType = ActionType.OFFER_DISCOUNT;
+    if (strategy === "HUMAN_ESCALATION") actionType = ActionType.ESCALATE;
 
     const discountPercent = actionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0;
 
@@ -240,7 +239,7 @@ export class SimulationRunner {
     for (let attempt = 1; attempt <= 3; attempt++) {
       retryCount = attempt;
 
-      // Policy Gatekeeper evaluation per attempt
+      // Policy Gatekeeper check per attempt
       const policyDecision = evaluatePolicy({
         currentState: "DIAGNOSED" as any,
         action: actionType,
@@ -255,32 +254,34 @@ export class SimulationRunner {
         break;
       }
 
-      // Check natural organic payment on this attempt
+      // Natural organic recovery check
       if (prng.next() < gt.naturalRecoveryProbability) {
         recoveredPaise = tCase.amountPaise;
         finalState = "PAID";
         break;
       }
 
-      // Adaptive recovery action execution
-      if (gt.canRecover) {
-        if (diagnosis.category === "EXPIRED_PAYMENT_METHOD" && actionType === ActionType.CREATE_PAYMENT_LINK) {
-          // Payment link succeeds for expired cards
-          recoveredPaise = tCase.amountPaise;
+      // Execute Payment Action Routing
+      if (actionType === ActionType.CREATE_PAYMENT_LINK || actionType === ActionType.OFFER_DISCOUNT) {
+        const linkRes = await this.paymentProvider.createPaymentLink(
+          tCase.id,
+          tCase.amountPaise,
+          discountPercent,
+          `idem_link_${tCase.id}_${attempt}`
+        );
+        if (linkRes.success || (gt.canRecover && (diagnosis.category === "EXPIRED_PAYMENT_METHOD" || diagnosis.category === "AUTHENTICATION_FAILURE"))) {
+          recoveredPaise = linkRes.amountRecoveredPaise > BigInt(0) ? linkRes.amountRecoveredPaise : tCase.amountPaise;
           finalState = "PAID";
           break;
-        } else if (diagnosis.category === "TEMPORARY_FAILURE" && attempt >= 2) {
-          // Temporary gateway error recovers on attempt 2
-          recoveredPaise = tCase.amountPaise;
-          finalState = "PAID";
-          break;
-        } else if (diagnosis.category === "INSUFFICIENT_FUNDS" && attempt >= 2) {
-          // Balance retry succeeds on attempt 2 after salary delay
-          recoveredPaise = tCase.amountPaise;
-          finalState = "PAID";
-          break;
-        } else if (diagnosis.category === "AUTHENTICATION_FAILURE" && actionType === ActionType.CREATE_PAYMENT_LINK) {
-          // 3DS auth link succeeds
+        }
+      } else if (actionType === ActionType.RETRY_PAYMENT) {
+        const retryRes = await this.paymentProvider.retryPayment(
+          tCase.id,
+          tCase.amountPaise,
+          `idem_retry_${tCase.id}_${attempt}`,
+          diagnosis.category
+        );
+        if (retryRes.success || (gt.canRecover && (diagnosis.category === "TEMPORARY_FAILURE" || (diagnosis.category === "INSUFFICIENT_FUNDS" && attempt >= 2)))) {
           recoveredPaise = tCase.amountPaise;
           finalState = "PAID";
           break;
@@ -295,7 +296,7 @@ export class SimulationRunner {
     const discountCost = (recoveredPaise * BigInt(Math.round(discountPercent * 100))) / BigInt(10000);
     const netRecovered = recoveredPaise - discountCost;
 
-    // Unnecessary Intervention: an active intervention executed when customer was unrecoverable
+    // Evaluation Metric: Unnecessary intervention on unrecoverable case
     const isUnnecessaryIntervention = !gt.canRecover && retryCount > 0;
 
     return {
@@ -318,7 +319,7 @@ export class SimulationRunner {
       isUnnecessaryIntervention,
       hasP2P,
       p2pIntent,
-      p2pAccepted,
+      p2pAccepted: false,
     };
   }
 
@@ -366,7 +367,7 @@ export class SimulationRunner {
       }
     }
 
-    const controlNetPaise = controlGrossPaise; // Control gives 0 discount
+    const controlNetPaise = controlGrossPaise;
     const incrementalRecoveredPaise = treatmentNetPaise - controlNetPaise;
 
     const controlRate = Number((controlGrossPaise * BigInt(10000)) / totalRiskPaise) / 100;
@@ -387,7 +388,7 @@ export class SimulationRunner {
       controlCount: controlCases.length,
       treatmentCount: treatmentOutcomes.length,
 
-      totalRiskPaise: (totalRiskPaise * BigInt(2)).toString(), // Total risk across both cohorts
+      totalRiskPaise: (totalRiskPaise * BigInt(2)).toString(),
       controlGrossRecoveredPaise: controlGrossPaise.toString(),
       treatmentGrossRecoveredPaise: treatmentGrossPaise.toString(),
 

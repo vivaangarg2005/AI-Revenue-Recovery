@@ -7,10 +7,10 @@ export function SimulationLabScreen() {
   const [loading, setLoading] = useState(false);
 
   const multiSeedData = [
-    { seed: 20260822, controlNet: "₹1,96,826", treatNet: "₹3,50,970", incremental: "+₹1,54,144", lift: "+78.31%", accuracy: "87.6%", escalations: 39, unneeded: "3.2%" },
-    { seed: 20260823, controlNet: "₹2,59,420", treatNet: "₹4,31,772", incremental: "+₹1,72,352", lift: "+66.43%", accuracy: "84.8%", escalations: 36, unneeded: "8.4%" },
-    { seed: 20260824, controlNet: "₹1,90,535", treatNet: "₹3,42,283", incremental: "+₹1,51,748", lift: "+79.64%", accuracy: "83.6%", escalations: 34, unneeded: "5.2%" },
-    { seed: 20260825, controlNet: "₹2,28,117", treatNet: "₹3,45,881", incremental: "+₹1,17,764", lift: "+51.62%", accuracy: "83.6%", escalations: 40, unneeded: "4.8%" },
+    { seed: 20260822, controlNet: "₹1,96,826", treatNet: "₹2,10,016", incremental: "+₹13,190", lift: "+6.70%", accuracy: "87.6%", escalations: 89, unneeded: "0.0%" },
+    { seed: 20260823, controlNet: "₹2,59,420", treatNet: "₹3,02,104", incremental: "+₹42,684", lift: "+16.45%", accuracy: "84.8%", escalations: 104, unneeded: "0.0%" },
+    { seed: 20260824, controlNet: "₹1,90,535", treatNet: "₹2,61,105", incremental: "+₹70,570", lift: "+37.03%", accuracy: "83.6%", escalations: 92, unneeded: "0.0%" },
+    { seed: 20260825, controlNet: "₹2,28,117", treatNet: "₹2,82,298", incremental: "+₹54,181", lift: "+23.75%", accuracy: "83.6%", escalations: 100, unneeded: "0.0%" },
   ];
 
   const fetchSimulationData = async () => {

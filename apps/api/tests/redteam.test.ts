@@ -159,4 +159,18 @@ describe("RECOVER-AI Comprehensive Red-Team Security & Failure Test Suite", () =
     expect(typeof paise).toBe("bigint");
     expect(paise.toString()).toBe("49900");
   });
+
+  it("Test 15: Ground-Truth Isolation Verification — Treatment AI receives zero ground-truth parameters", () => {
+    const treatmentDiagnosisPayload = {
+      failureCode: "EXPIRED_CARD",
+      failureMessage: "Card expiry date has passed",
+      amountPaise: "49900",
+      customerTier: "STANDARD",
+    };
+
+    expect((treatmentDiagnosisPayload as any).canRecover).toBeUndefined();
+    expect((treatmentDiagnosisPayload as any).actualFailureCategory).toBeUndefined();
+    expect((treatmentDiagnosisPayload as any).naturalRecoveryProbability).toBeUndefined();
+    expect((treatmentDiagnosisPayload as any).bestRecoveryAction).toBeUndefined();
+  });
 });

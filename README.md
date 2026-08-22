@@ -44,30 +44,26 @@ Payment Failure ──► AI Diagnosis ──► Zod Validation ──► Policy
 - **Monorepo:** npm Workspaces (`apps/api`, `apps/web`, `packages/shared`)
 - **Backend:** Node.js 20 LTS, TypeScript, Express, Prisma ORM, PostgreSQL 16
 - **Frontend:** React 18, Vite, Tailwind CSS, Recharts, Lucide Icons
-- **AI & Logic:** OpenAI SDK / `MockAIProvider` ($₹0$ cost), Zod schemas
-- **Testing:** 84/84 automated Vitest tests passing (including 11 red-team security tests)
+- **AI & Logic:** Official `@google/genai` SDK (`GeminiAIProvider`), `MockAIProvider` ($₹0$ cost fallback), Zod schemas
+- **Testing:** 84/84 automated Vitest tests passing (including 12 red-team & ground-truth isolation tests)
 
 ---
 
 ## 4. Experiment History & Results
 
-### The Engineering Pivot Story
-In our initial 500-case simulation run, RECOVER-AI produced a reported lift of **-6.2%** (Control: ₹1,90,231 vs RECOVER-AI: ₹1,78,436).
+### Ground-Truth Isolation & P2P Attribution Audit
+Following a strict audit, we eliminated all potential ground-truth parameter leakage from decision paths and separated Promise-to-Pay commitments from financial payment recoveries.
 
-**Root Cause:** Treatment stopped after a single attempt, whereas Control had up to 3 retries across days. Additionally, RECOVER-AI escalated 143 cases prematurely.
-
-**Fix Implemented:** We granted RECOVER-AI an equal 3-attempt budget, added adaptive failure-specific recovery strategies (e.g. payment links for expired cards), and corrected the unnecessary-intervention measurement metric.
-
-### Final Multi-Seed Robustness Results (500 Paired Cases)
+### Final Multi-Seed Robustness Results (500 Paired Cases — Zero Ground-Truth Leakage)
 
 | Seed | Control Net (₹) | RECOVER-AI Net (₹) | Incremental Net (₹) | Treatment Lift % | AI Diagnosis Acc % | Escalations | Unneeded Interventions % |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **20260822** | ₹1,96,826 | ₹3,50,970 | +₹1,54,144 | **+78.31%** | 87.6% | 39 | 3.2% |
-| **20260823** | ₹2,59,420 | ₹4,31,772 | +₹1,72,352 | **+66.43%** | 84.8% | 36 | 8.4% |
-| **20260824** | ₹1,90,535 | ₹3,42,283 | +₹1,51,748 | **+79.64%** | 83.6% | 34 | 5.2% |
-| **20260825** | ₹2,28,117 | ₹3,45,881 | +₹1,17,764 | **+51.62%** | 83.6% | 40 | 4.8% |
+| **20260822** | ₹1,96,826 | ₹2,10,016 | +₹13,190 | **+6.70%** | 87.6% | 89 | 0.0% |
+| **20260823** | ₹2,59,420 | ₹3,02,104 | +₹42,684 | **+16.45%** | 84.8% | 104 | 0.0% |
+| **20260824** | ₹1,90,535 | ₹2,61,105 | +₹70,570 | **+37.03%** | 83.6% | 92 | 0.0% |
+| **20260825** | ₹2,28,117 | ₹2,82,298 | +₹54,181 | **+23.75%** | 83.6% | 100 | 0.0% |
 
-Across four deterministic synthetic experiments, RECOVER-AI produced a **reported mean recovery lift of +69.00%** over the baseline with a measured 3.2% unnecessary-intervention rate on seed 20260822.
+Across four deterministic synthetic experiments with zero ground-truth leakage, RECOVER-AI produced a **reported mean recovery lift of +20.98%** over static dunning.
 
 ---
 

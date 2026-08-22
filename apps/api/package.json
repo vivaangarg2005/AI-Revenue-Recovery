@@ -15,6 +15,7 @@
     "db:seed": "npx --no-install tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.18.0",
     "@prisma/client": "^5.14.0",
     "@recover-ai/shared": "*",
     "cors": "^2.8.5",

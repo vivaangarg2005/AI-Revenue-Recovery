@@ -199,17 +199,29 @@ export class RecoveryService {
       };
     }
 
-    // STEP 8: Execute Mock Payment Action
+    // STEP 8: Execute Payment Action Routing based on ActionType
     const paymentIdempotencyKey = `${caseId}_pay_${recoveryCase.retryCount + 1}`;
     
     await this.createAuditEvent(caseId, "PAYMENT_ATTEMPTED", { idempotencyKey: paymentIdempotencyKey }, correlationId);
 
-    const paymentResult = await this.paymentProvider.retryPayment(
-      caseId,
-      recoveryCase.amountDuePaise,
-      paymentIdempotencyKey,
-      diagnosisResult.category
-    );
+    let paymentResult;
+    const discountPercent = proposedActionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0;
+
+    if (proposedActionType === ActionType.CREATE_PAYMENT_LINK || proposedActionType === ActionType.OFFER_DISCOUNT) {
+      paymentResult = await this.paymentProvider.createPaymentLink(
+        caseId,
+        recoveryCase.amountDuePaise,
+        discountPercent,
+        paymentIdempotencyKey
+      );
+    } else {
+      paymentResult = await this.paymentProvider.retryPayment(
+        caseId,
+        recoveryCase.amountDuePaise,
+        paymentIdempotencyKey,
+        diagnosisResult.category
+      );
+    }
 
     // Record PaymentAttempt
     await prisma.paymentAttempt.create({

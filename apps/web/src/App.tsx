@@ -54,11 +54,13 @@ export function App() {
           {health && (
             <div className="flex items-center gap-3 font-mono text-xs text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 self-start md:self-auto">
               <div className="flex items-center gap-1.5">
-                <div className={`w-2 h-2 rounded-full ${health.status === "OK" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+                <div className={`w-2 h-2 rounded-full ${health.status === "ok" || health.status === "OK" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
                 <span>Backend: {health.status}</span>
               </div>
               <span className="text-slate-600">|</span>
-              <span className="text-emerald-400 font-bold">Mock Mode: Active (₹0 Cost)</span>
+              <span className="text-purple-400 font-bold">AI Provider: {(health as any).aiProviderName || "Mock"}</span>
+              <span className="text-slate-600">|</span>
+              <span className="text-emerald-400 font-bold">Mock Mode: Active</span>
             </div>
           )}
         </div>

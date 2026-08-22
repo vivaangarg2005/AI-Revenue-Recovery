@@ -43,9 +43,11 @@ healthRouter.get("/health", async (req: Request, res: Response) => {
   const validatedResponse = HealthCheckResponseSchema.parse(responsePayload);
   const isMock = process.env.AI_MODE === "mock" || process.env.PAYMENT_PROVIDER_MODE === "mock";
   const statusCode = (overallStatus === "down" && !isMock) ? 503 : 200;
+  const aiProviderName = process.env.AI_MODE === "gemini" ? "Gemini" : "Mock";
 
   res.status(statusCode).json({
     ...validatedResponse,
     mockMode: isMock,
+    aiProviderName,
   });
 });

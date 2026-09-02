@@ -100,7 +100,7 @@ export function RecoveryCaseCenter() {
           <div>
             <h2 className="font-bold text-lg text-white">End-to-End Recovery Case Command Center</h2>
             <p className="text-xs text-slate-400 font-mono">
-              Execute full AI reasoning $\rightarrow$ Policy check $\rightarrow$ Payment execution lifecycle
+              Execute full AI reasoning → Policy check → Payment execution lifecycle
             </p>
           </div>
         </div>
@@ -124,7 +124,7 @@ export function RecoveryCaseCenter() {
             <Sparkles className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-sm font-bold text-white mt-1">Temporary Timeout Failure</div>
-          <div className="text-xs text-slate-400 mt-1">Gateway timeout $\rightarrow$ Retry succeeds $\rightarrow$ PAID</div>
+          <div className="text-xs text-slate-400 mt-1">Gateway timeout → Retry succeeds → PAID</div>
         </button>
 
         <button
@@ -137,7 +137,7 @@ export function RecoveryCaseCenter() {
             <Sparkles className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-sm font-bold text-white mt-1">Permanent Closed Account</div>
-          <div className="text-xs text-slate-400 mt-1">Closed mandate $\rightarrow$ Escalated $\rightarrow$ ESCALATED</div>
+          <div className="text-xs text-slate-400 mt-1">Closed mandate → Escalated → ESCALATED</div>
         </button>
 
         <button
@@ -150,7 +150,7 @@ export function RecoveryCaseCenter() {
             <Sparkles className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-sm font-bold text-white mt-1">Excessive Discount Request</div>
-          <div className="text-xs text-slate-400 mt-1">AI 20% discount $\rightarrow$ Policy denies $\rightarrow$ POLICY_BLOCKED</div>
+          <div className="text-xs text-slate-400 mt-1">AI 20% discount → Policy denies → POLICY_BLOCKED</div>
         </button>
       </div>
 
@@ -167,15 +167,15 @@ export function RecoveryCaseCenter() {
               <span className="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-400 border border-slate-800">
                 FAILED
               </span>
-              <span className="text-slate-600">$\rightarrow$</span>
+              <span className="text-slate-600 font-bold">→</span>
               <span className="px-3 py-1.5 rounded-lg bg-slate-900 text-purple-300 border border-purple-500/30">
                 DIAGNOSING
               </span>
-              <span className="text-slate-600">$\rightarrow$</span>
+              <span className="text-slate-600 font-bold">→</span>
               <span className="px-3 py-1.5 rounded-lg bg-slate-900 text-indigo-300 border border-indigo-500/30">
                 DIAGNOSED
               </span>
-              <span className="text-slate-600">$\rightarrow$</span>
+              <span className="text-slate-600 font-bold">→</span>
               <span
                 className={`px-3 py-1.5 rounded-lg border font-bold ${
                   workflowResult.finalState === "PAID"

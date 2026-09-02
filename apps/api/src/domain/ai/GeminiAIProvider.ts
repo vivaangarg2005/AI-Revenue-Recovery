@@ -58,6 +58,10 @@ Return ONLY a JSON object matching this exact schema:
       });
 
       const text = response.text || "{}";
+      console.log("\n================================================");
+      console.log("🤖 [GeminiAIProvider] RAW DIAGNOSIS RESPONSE:");
+      console.log(text);
+      console.log("================================================\n");
       const parsedRaw = JSON.parse(text);
       return DiagnosisOutputSchema.parse(parsedRaw);
     } catch (err: any) {
@@ -103,6 +107,10 @@ Return ONLY a JSON object matching this exact schema:
       });
 
       const text = response.text || "{}";
+      console.log("\n================================================");
+      console.log("🤖 [GeminiAIProvider] RAW P2P RESPONSE:");
+      console.log(text);
+      console.log("================================================\n");
       const parsedRaw = JSON.parse(text);
       return P2PExtractionOutputSchema.parse(parsedRaw);
     } catch (err: any) {

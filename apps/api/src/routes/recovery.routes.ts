@@ -11,6 +11,9 @@ export const recoveryRouter = Router();
 
 const CreateCaseSchema = z.object({
   customerId: z.string().optional(),
+  customerName: z.string().optional(),
+  customerEmail: z.string().optional(),
+  customerPhone: z.string().optional(),
   subscriptionId: z.string().optional(),
   invoiceId: z.string().optional(),
   failureCode: z.string().min(1),
@@ -49,17 +52,21 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
   const correlationId = `corr_${crypto.randomBytes(8).toString("hex")}`;
 
   try {
-    // Ensure Customer exists or create default demo customer
+    const customerEmail = data.customerEmail || "demo.customer@example.com";
+    const customerName = data.customerName || "Demo Merchant Customer";
+    const customerPhone = data.customerPhone || "+919876543210";
+
+    // Ensure Customer exists or create customer
     let customer = await prisma.customer.findFirst({
-      where: data.customerId ? { id: data.customerId } : { email: "demo.customer@example.com" },
+      where: data.customerId ? { id: data.customerId } : { email: customerEmail },
     });
 
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
-          email: "demo.customer@example.com",
-          name: "Demo Merchant Customer",
-          phone: "+919876543210",
+          email: customerEmail,
+          name: customerName,
+          phone: customerPhone,
           tier: data.customerTier,
           isOptedOut: data.isOptedOut,
         },
@@ -81,10 +88,15 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
       });
     }
 
-    // Ensure Invoice exists
-    let invoice = await prisma.invoice.findFirst({
-      where: data.invoiceId ? { id: data.invoiceId } : { subscriptionId: subscription.id },
-    });
+    // Ensure fresh Invoice exists for this new recovery case (invoiceId has @unique constraint on RecoveryCase)
+    let invoice: any = null;
+    if (data.invoiceId) {
+      const existing = await prisma.invoice.findUnique({ where: { id: data.invoiceId } });
+      const hasCase = existing ? await prisma.recoveryCase.findUnique({ where: { invoiceId: existing.id } }) : null;
+      if (existing && !hasCase) {
+        invoice = existing;
+      }
+    }
 
     if (!invoice) {
       invoice = await prisma.invoice.create({
@@ -162,7 +174,26 @@ recoveryRouter.post("/recovery-cases/:id/run", async (req: Request, res: Respons
 
   try {
     const result = await RecoveryService.runRecoveryWorkflow(id);
-    res.json(serializeBigInt(result));
+
+    // Return the full enriched case with all audit events, diagnosis, and transitions
+    const fullCase = await prisma.recoveryCase.findUnique({
+      where: { id },
+      include: {
+        subscription: {
+          include: { customer: true },
+        },
+        invoice: true,
+        AIDiagnosis: { orderBy: { createdAt: "desc" } },
+        PolicyDecision: { orderBy: { createdAt: "desc" } },
+        RecoveryAction: { orderBy: { createdAt: "desc" } },
+        FailureEvent: { orderBy: { occurredAt: "desc" } },
+        P2PCommitment: { orderBy: { createdAt: "desc" } },
+        FSMTransition: { orderBy: { createdAt: "asc" } },
+        AuditEvent: { orderBy: { createdAt: "asc" } },
+      },
+    });
+
+    res.json(serializeBigInt(fullCase || result));
   } catch (err: any) {
     res.status(500).json({
       error: {

@@ -164,10 +164,12 @@ export function CaseDetailModal({ caseData, onClose }: CaseDetailModalProps) {
             <div className="flex items-center gap-2 overflow-x-auto py-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
               {transitions.map((t: any, i: number) => (
                 <div key={i} className="flex items-center gap-2 shrink-0">
-                  <span className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300">
-                    {t.fromState} $\rightarrow$ <strong className="text-indigo-300">{t.toState}</strong>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+                    <span className="text-slate-400">{t.fromState}</span>
+                    <span className="text-indigo-400 font-bold">→</span>
+                    <strong className="text-indigo-300 font-bold">{t.toState}</strong>
                   </span>
-                  {i < transitions.length - 1 && <span className="text-slate-600">$\rightarrow$</span>}
+                  {i < transitions.length - 1 && <span className="text-slate-600 font-bold">→</span>}
                 </div>
               ))}
             </div>

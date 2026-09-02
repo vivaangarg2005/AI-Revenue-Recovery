@@ -6,7 +6,6 @@ import {
   Lock,
   PlusCircle,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CaseDetailModal } from "./CaseDetailModal";
 
 export function CommandCenter() {
@@ -38,11 +37,8 @@ export function CommandCenter() {
   const handleCreateDemoCase = async () => {
     setDemoCreating(true);
     try {
-      // 1. Create a known synthetic payment failure case
-      const createRes = await fetch("/api/v1/recovery-cases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const demoScenarios = [
+        {
           customerName: "Acme Corp (Enterprise)",
           customerEmail: "finance@acme.com",
           customerPhone: "+919876543210",
@@ -51,7 +47,56 @@ export function CommandCenter() {
           failureCode: "EXPIRED_CARD",
           failureMessage: "Card expiry date has passed during subscription renewal",
           inboundP2PMessage: "We will pay this Friday after our billing cycle resets.",
-        }),
+        },
+        {
+          customerName: "Zomato Gold Partner",
+          customerEmail: "billing@zomato-partner.in",
+          customerPhone: "+919811122233",
+          customerTier: "STANDARD",
+          amountPaise: 99900, // ₹999
+          failureCode: "GATEWAY_TIMEOUT",
+          failureMessage: "HDFC bank payment gateway timed out during mandate debit",
+          inboundP2PMessage: "Please retry in the evening, my account is active.",
+        },
+        {
+          customerName: "Flipkart Seller Pro",
+          customerEmail: "ops@flipkart-seller.com",
+          customerPhone: "+919822233344",
+          customerTier: "ENTERPRISE",
+          amountPaise: 1499900, // ₹14,999
+          failureCode: "INSUFFICIENT_FUNDS",
+          failureMessage: "Insufficient funds in customer ICICI current account",
+          inboundP2PMessage: "Salary payout is on 1st, please hold retries until then.",
+        },
+        {
+          customerName: "Swiggy Super Merchant",
+          customerEmail: "payments@swiggystore.com",
+          customerPhone: "+919833344455",
+          customerTier: "STANDARD",
+          amountPaise: 249900, // ₹2,499
+          failureCode: "3DS_AUTH_FAILED",
+          failureMessage: "Customer failed two-factor 3DS OTP verification",
+          inboundP2PMessage: "Send me a direct payment link on WhatsApp.",
+        },
+        {
+          customerName: "CRED Club VIP Member",
+          customerEmail: "vip@cred-member.co",
+          customerPhone: "+919844455566",
+          customerTier: "ENTERPRISE",
+          amountPaise: 2999900, // ₹29,999
+          failureCode: "EXPIRED_CARD",
+          failureMessage: "Corporate credit card expired on 08/26",
+          inboundP2PMessage: "Corporate card renewed, send me the new checkout link.",
+        },
+      ];
+
+      const chosenScenario = demoScenarios[Math.floor(Math.random() * demoScenarios.length)];
+
+      // 1. Create synthetic payment failure case
+      const createRes = await fetch("/api/v1/recovery-cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chosenScenario),
       });
       const newCase = await createRes.json();
 
@@ -64,6 +109,7 @@ export function CommandCenter() {
       // 3. Update list & open case detail modal
       setCases((prev) => [updatedCase, ...prev]);
       setSelectedCase(updatedCase);
+      await fetchData();
     } catch (err) {
       console.error(err);
     } finally {
@@ -159,31 +205,83 @@ export function CommandCenter() {
 
       {/* Main Visual Comparison & How It Decides */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recharts Net Recovery Comparison */}
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+        {/* Visual Net Recovery Comparison */}
+        <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="font-bold text-sm text-white flex items-center gap-2 font-mono">
               <TrendingUp className="w-4 h-4 text-emerald-400" /> Control vs RECOVER-AI Net Recovery
             </h3>
+            {metrics && (
+              <span className="text-[11px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                +{metrics.recoveryLiftPercent}% Lift
+              </span>
+            )}
           </div>
 
-          <div className="h-48 w-full font-mono text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                <Tooltip
-                  formatter={(val: any) => [`₹${Number(val).toLocaleString("en-IN")}`, "Net Recovered"]}
-                  contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "8px" }}
-                />
-                <Bar dataKey="recovered" radius={[6, 6, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {metrics ? (
+            <div className="space-y-4 font-mono py-2">
+              {/* Control Bar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-medium">Control (Blind Retries)</span>
+                  <span className="text-slate-300 font-bold">
+                    ₹{(Number(metrics.controlNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="w-full h-7 bg-slate-900 rounded-lg overflow-hidden p-1 border border-slate-800">
+                  <div
+                    className="h-full bg-slate-600 rounded-md transition-all duration-700 flex items-center justify-end pr-2 text-[10px] text-white font-bold"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          20,
+                          (Number(metrics.controlNetRecoveredPaise || 1) /
+                            Number(metrics.treatmentNetRecoveredPaise || 1)) *
+                            85
+                        )
+                      )}%`,
+                    }}
+                  >
+                    {metrics.controlRecoveryRatePercent}%
+                  </div>
+                </div>
+              </div>
+
+              {/* RECOVER-AI Bar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    RECOVER-AI (Smart Engine)
+                  </span>
+                  <span className="text-emerald-400 font-bold text-sm">
+                    ₹{(Number(metrics.treatmentNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="w-full h-7 bg-slate-900 rounded-lg overflow-hidden p-1 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-600 to-teal-400 rounded-md transition-all duration-700 flex items-center justify-end pr-2 text-[10px] text-slate-950 font-black"
+                    style={{ width: "100%" }}
+                  >
+                    {metrics.treatmentRecoveryRatePercent}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-slate-500 text-center pt-1 border-t border-slate-800/60">
+                Incremental Gain:{" "}
+                <strong className="text-indigo-400">
+                  +₹{(Number(metrics.incrementalRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+                </strong>{" "}
+                saved across batch
+              </div>
+            </div>
+          ) : (
+            <div className="h-36 flex items-center justify-center text-xs text-slate-500 font-mono">
+              Loading simulation metrics...
+            </div>
+          )}
         </div>
 
         {/* How RECOVER-AI Decides Visual Flow (5 steps) */}
@@ -333,7 +431,7 @@ export function CommandCenter() {
                   <td className="p-3 font-bold text-emerald-400">
                     ₹{(Number(c.recoveredPaise || 0) / 100).toFixed(0)}
                   </td>
-                  <td className="p-3 text-slate-400 text-[11px]">Inspect Lifecycle $\rightarrow$</td>
+                  <td className="p-3 text-slate-400 text-[11px] group-hover:text-indigo-400 transition-colors">Inspect Lifecycle →</td>
                 </tr>
               ))}
             </tbody>

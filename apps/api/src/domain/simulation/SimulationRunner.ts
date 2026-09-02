@@ -1,4 +1,4 @@
-import { getAIProvider } from "../ai/aiFactory.js";
+import { MockAIProvider } from "../ai/MockAIProvider.js";
 import { evaluatePolicy } from "../policy/policy.js";
 import { ActionType } from "../policy/policy.types.js";
 import { MockPaymentProvider } from "../payment/MockPaymentProvider.js";
@@ -103,7 +103,7 @@ export class SimulationRunner {
    */
   private static async runTreatmentCase(tCase: SyntheticCase, prng: PseudoRandom): Promise<CaseOutcome> {
     const gt = tCase.groundTruth;
-    const aiProvider = getAIProvider();
+    const aiProvider = new MockAIProvider();
 
     // STEP 1: AI Diagnosis (Observes ONLY public payment failure data - NO ground truth fields)
     const diagnosis = await aiProvider.diagnosePaymentFailure({

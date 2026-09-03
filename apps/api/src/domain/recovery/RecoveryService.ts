@@ -34,6 +34,29 @@ export class RecoveryService {
   public static async runRecoveryWorkflow(caseId: string) {
     const correlationId = `corr_${crypto.randomBytes(8).toString("hex")}`;
 
+    const claimed = await prisma.recoveryCase.updateMany({
+      where: { id: caseId, fsmState: FSMState.FAILED },
+      data: { fsmState: FSMState.DIAGNOSING },
+    });
+
+    if (claimed.count !== 1) {
+      throw Object.assign(new Error("Case is already being processed or is not runnable"), {
+        statusCode: 409,
+        code: "CASE_NOT_RUNNABLE",
+      });
+    }
+
+    await prisma.fSMTransition.create({
+      data: {
+        caseId,
+        fromState: FSMState.FAILED,
+        toState: FSMState.DIAGNOSING,
+        trigger: "WORKFLOW_START",
+        actor: "SYSTEM",
+        correlationId,
+      },
+    });
+
     // 1. Fetch Case with Subscription & Customer, Invoice, and FailureEvents
     const recoveryCase = await prisma.recoveryCase.findUnique({
       where: { id: caseId },
@@ -50,14 +73,14 @@ export class RecoveryService {
       throw new Error(`RecoveryCase with ID ${caseId} not found`);
     }
 
-    const initialState = recoveryCase.fsmState;
+    const initialState = FSMState.FAILED;
 
     // Guard: If already terminal (PAID, TERMINATED_OPT_OUT), return early
-    if (initialState === FSMState.PAID || initialState === FSMState.TERMINATED_OPT_OUT) {
+    if (recoveryCase.fsmState === FSMState.PAID || recoveryCase.fsmState === FSMState.TERMINATED_OPT_OUT) {
       return {
         caseId,
-        initialState,
-        finalState: initialState,
+        initialState: recoveryCase.fsmState,
+        finalState: recoveryCase.fsmState,
         message: "Case is already in terminal state",
         recoveredPaise: recoveryCase.recoveredPaise.toString(),
       };
@@ -66,9 +89,6 @@ export class RecoveryService {
     const customer = recoveryCase.subscription?.customer || { tier: "STANDARD", isOptedOut: false };
     const failureCode = recoveryCase.FailureEvent[0]?.rawProviderCode || "GATEWAY_TIMEOUT";
     const failureMessage = recoveryCase.FailureEvent[0]?.normalizedCategory || "Payment debit failure";
-
-    // STEP 1: FAILED -> DIAGNOSING
-    await this.updateCaseState(caseId, FSMState.DIAGNOSING, "WORKFLOW_START", correlationId);
 
     // STEP 2: AI Diagnosis
     const aiProvider = getAIProvider();
@@ -224,27 +244,42 @@ export class RecoveryService {
     }
 
     // Record PaymentAttempt
-    await prisma.paymentAttempt.create({
-      data: {
-        invoiceId: recoveryCase.invoiceId,
-        attemptNumber: recoveryCase.retryCount + 1,
-        amountPaise: paymentResult.amountRecoveredPaise,
-        idempotencyKey: paymentIdempotencyKey,
-        status: paymentResult.success ? "SUCCESS" : "FAILED",
-        failureReason: paymentResult.failureReason,
-      },
-    });
+    await prisma.$transaction([
+      prisma.paymentAttempt.create({
+        data: {
+          invoiceId: recoveryCase.invoiceId,
+          attemptNumber: recoveryCase.retryCount + 1,
+          amountPaise: paymentResult.amountRecoveredPaise,
+          idempotencyKey: paymentIdempotencyKey,
+          status: paymentResult.success ? "SUCCESS" : "FAILED",
+          failureReason: paymentResult.failureReason,
+        },
+      }),
+      prisma.recoveryCase.update({
+        where: { id: caseId },
+        data: { retryCount: { increment: 1 } },
+      }),
+    ]);
 
     if (paymentResult.success) {
       // Transition ACTION_AUTHORIZED -> AWAITING_PAYMENT -> PAID
       await this.updateCaseState(caseId, FSMState.AWAITING_PAYMENT, "PAYMENT_EXECUTED", correlationId);
       await this.updateCaseState(caseId, FSMState.PAID, "PAYMENT_CONFIRMED", correlationId);
 
-      // Update Case Recovered Amount
-      await prisma.recoveryCase.update({
-        where: { id: caseId },
-        data: { recoveredPaise: paymentResult.amountRecoveredPaise },
-      });
+      // Update Case Recovered Amount and Invoice
+      await prisma.$transaction([
+        prisma.recoveryCase.update({
+          where: { id: caseId },
+          data: { recoveredPaise: paymentResult.amountRecoveredPaise },
+        }),
+        prisma.invoice.update({
+          where: { id: recoveryCase.invoiceId },
+          data: {
+            amountPaidPaise: paymentResult.amountRecoveredPaise,
+            status: "PAID",
+          },
+        }),
+      ]);
 
       await prisma.recoveryAction.update({
         where: { id: actionRecord.id },

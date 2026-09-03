@@ -1,5 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
+import { mockPrismaInstance } from "./mockPrisma.js";
+
+vi.mock("../src/infrastructure/database/prisma.js", () => ({
+  prisma: mockPrismaInstance,
+}));
+
 import { app } from "../src/app.js";
 
 describe("GET /api/v1/health", () => {

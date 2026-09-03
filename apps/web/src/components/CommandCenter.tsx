@@ -14,6 +14,7 @@ export function CommandCenter() {
   const [filter, setFilter] = useState<string>("ALL");
   const [selectedCase, setSelectedCase] = useState<any>(null);
   const [demoCreating, setDemoCreating] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -36,6 +37,7 @@ export function CommandCenter() {
 
   const handleCreateDemoCase = async () => {
     setDemoCreating(true);
+    setErrorMsg(null);
     try {
       const demoScenarios = [
         {
@@ -98,20 +100,29 @@ export function CommandCenter() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(chosenScenario),
       });
+      if (!createRes.ok) {
+        const errData = await createRes.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Failed to create case (HTTP ${createRes.status})`);
+      }
       const newCase = await createRes.json();
 
       // 2. Run automated recovery workflow
       const runRes = await fetch(`/api/v1/recovery-cases/${newCase.id}/run`, {
         method: "POST",
       });
+      if (!runRes.ok) {
+        const errData = await runRes.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Failed to run workflow (HTTP ${runRes.status})`);
+      }
       const updatedCase = await runRes.json();
 
       // 3. Update list & open case detail modal
       setCases((prev) => [updatedCase, ...prev]);
       setSelectedCase(updatedCase);
       await fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMsg(err.message || "Failed to create recovery case. Ensure Database (PostgreSQL) is running.");
     } finally {
       setDemoCreating(false);
     }
@@ -126,20 +137,6 @@ export function CommandCenter() {
     return true;
   });
 
-  const chartData = metrics
-    ? [
-        {
-          name: "Control Baseline",
-          recovered: Number(metrics.controlNetRecoveredPaise || 0) / 100,
-          color: "#64748b",
-        },
-        {
-          name: "RECOVER-AI Engine",
-          recovered: Number(metrics.treatmentNetRecoveredPaise || 0) / 100,
-          color: "#10b981",
-        },
-      ]
-    : [];
 
   return (
     <div className="space-y-6 font-sans">
@@ -163,6 +160,18 @@ export function CommandCenter() {
           </span>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-500/50 text-xs font-mono text-rose-200 flex items-center justify-between gap-2">
+          <span>⚠️ {errorMsg}</span>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="px-2 py-0.5 rounded bg-rose-900 hover:bg-rose-800 text-white font-bold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Top KPI Cards (Real Data from API) */}
       {metrics && (
@@ -234,12 +243,7 @@ export function CommandCenter() {
                     style={{
                       width: `${Math.min(
                         100,
-                        Math.max(
-                          20,
-                          (Number(metrics.controlNetRecoveredPaise || 1) /
-                            Number(metrics.treatmentNetRecoveredPaise || 1)) *
-                            85
-                        )
+                        Math.max(12, Number(metrics.controlRecoveryRatePercent || 0))
                       )}%`,
                     }}
                   >
@@ -262,7 +266,12 @@ export function CommandCenter() {
                 <div className="w-full h-7 bg-slate-900 rounded-lg overflow-hidden p-1 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
                   <div
                     className="h-full bg-gradient-to-r from-emerald-600 to-teal-400 rounded-md transition-all duration-700 flex items-center justify-end pr-2 text-[10px] text-slate-950 font-black"
-                    style={{ width: "100%" }}
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(12, Number(metrics.treatmentRecoveryRatePercent || 0))
+                      )}%`,
+                    }}
                   >
                     {metrics.treatmentRecoveryRatePercent}%
                   </div>

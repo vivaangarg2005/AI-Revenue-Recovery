@@ -12,7 +12,7 @@ export class InvalidTransitionError extends Error {
  * Pure, deterministic logic. Zero external dependencies.
  */
 const ALLOWED_TRANSITIONS: Record<FSMState, FSMState[]> = {
-  [FSMState.FAILED]: [FSMState.DIAGNOSING, FSMState.HALTED],
+  [FSMState.FAILED]: [FSMState.DIAGNOSING, FSMState.HALTED, FSMState.P2P_PAUSED, FSMState.ESCALATED],
   [FSMState.DIAGNOSING]: [
     FSMState.DIAGNOSED,
     FSMState.ESCALATED,

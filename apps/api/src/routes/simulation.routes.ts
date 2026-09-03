@@ -40,17 +40,21 @@ simulationRouter.post("/simulations", async (req: Request, res: Response) => {
  * GET /api/v1/simulations/latest
  * Fetches latest simulation summary metrics.
  */
-simulationRouter.get("/simulations/latest", async (req: Request, res: Response) => {
-  let latest = cachedSimulations.get("latest");
+simulationRouter.get("/simulations/latest", async (req: Request, res: Response, next) => {
+  try {
+    let latest = cachedSimulations.get("latest");
 
-  if (!latest) {
-    // Automatically run default simulation if not cached yet
-    latest = await SimulationRunner.runSimulation(20260822);
-    cachedSimulations.set(latest.metrics.simulationId, latest);
-    cachedSimulations.set("latest", latest);
+    if (!latest) {
+      // Automatically run default simulation if not cached yet
+      latest = await SimulationRunner.runSimulation(20260822);
+      cachedSimulations.set(latest.metrics.simulationId, latest);
+      cachedSimulations.set("latest", latest);
+    }
+
+    res.json(serializeBigInt(latest.metrics));
+  } catch (error) {
+    next(error);
   }
-
-  res.json(serializeBigInt(latest.metrics));
 });
 
 /**

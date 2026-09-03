@@ -63,6 +63,14 @@ class InMemoryPrisma {
       this.invoices.set(id, item);
       return item;
     },
+    update: async (args: any) => {
+      const id = args.where.id;
+      const existing = this.invoices.get(id);
+      if (!existing) throw new Error("Not found");
+      const updated = { ...existing, ...args.data, updatedAt: new Date() };
+      this.invoices.set(id, updated);
+      return updated;
+    },
   };
 
   recoveryCase = {
@@ -131,6 +139,18 @@ class InMemoryPrisma {
       const updated = { ...existing, ...args.data, updatedAt: new Date() };
       this.recoveryCases.set(caseId, updated);
       return updated;
+    },
+    updateMany: async (args: any) => {
+      let count = 0;
+      for (const [id, c] of this.recoveryCases.entries()) {
+        if (args.where.id && c.id !== args.where.id) continue;
+        if (args.where.fsmState && c.fsmState !== args.where.fsmState) continue;
+        
+        const updated = { ...c, ...args.data, updatedAt: new Date() };
+        this.recoveryCases.set(id, updated);
+        count++;
+      }
+      return { count };
     },
   };
 
@@ -213,7 +233,19 @@ class InMemoryPrisma {
     },
   };
 
-  $transaction = async (fn: any) => fn(this);
+  $transaction = async (args: any) => {
+    if (typeof args === "function") {
+      return args(this);
+    }
+    if (Array.isArray(args)) {
+      const results = [];
+      for (const op of args) {
+         results.push(await op);
+      }
+      return results;
+    }
+  };
+  $queryRaw = async () => [{ 1: 1 }];
 }
 
 export const mockPrismaInstance = new InMemoryPrisma();

@@ -35,9 +35,6 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
 
     // 2. Run Recovery Workflow
     const runRes = await request(app).post(`/api/v1/recovery-cases/${caseId}/run`);
-    if (runRes.status !== 200) {
-      console.log("RUN RES ERROR BODY:", runRes.body);
-    }
 
     expect(runRes.status).toBe(200);
     expect(runRes.body.initialState).toBe("FAILED");
@@ -64,6 +61,24 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     expect(runRes.status).toBe(200);
     expect(runRes.body.finalState).toBe("ESCALATED");
     expect(runRes.body.diagnosis.category).toBe("PERMANENT_FAILURE");
+  });
+
+  it("Scenario 2.5: Low confidence AI diagnosis -> Escalates to Human Review", async () => {
+    const createRes = await request(app)
+      .post("/api/v1/recovery-cases")
+      .send({
+        failureCode: "LOW_CONFIDENCE_RETRY",
+        failureMessage: "Unknown error",
+        amountPaise: 99900,
+      });
+
+    const caseId = createRes.body.id;
+    const runRes = await request(app).post(`/api/v1/recovery-cases/${caseId}/run`);
+
+    expect(runRes.status).toBe(200);
+    expect(runRes.body.diagnosis.confidence).toBeLessThan(0.70);
+    expect(runRes.body.finalState).toBe("ESCALATED");
+    expect(runRes.body.action.actionType).toBe("ESCALATE");
   });
 
   it("Scenario 3: Excessive discount recommendation -> Policy Gatekeeper DENIES -> POLICY_BLOCKED state", async () => {

@@ -43,6 +43,14 @@ export class MockAIProvider implements AIProvider {
         recommendedStrategy: "HUMAN_ESCALATION",
         recommendedDelayDays: 0,
       };
+    } else if (code.includes("LOW_CONFIDENCE_RETRY")) {
+      rawOutput = {
+        rootCause: "Maybe it will work",
+        category: "TEMPORARY_FAILURE",
+        confidence: 0.50,
+        recommendedStrategy: "SCHEDULED_RETRY",
+        recommendedDelayDays: 1,
+      };
     } else {
       rawOutput = {
         rootCause: `Unrecognized payment failure code: ${input.failureCode}`,

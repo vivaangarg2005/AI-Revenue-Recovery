@@ -50,12 +50,12 @@ export function PolicyGateDemo() {
             <Sliders className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-white">Policy Gatekeeper Playground</h3>
-            <p className="text-xs text-slate-400 font-mono">Test deterministic financial boundary rules in real time</p>
+            <h3 className="font-bold text-base text-white tracking-wide">POLICY GATEKEEPER</h3>
+            <p className="text-sm text-slate-400 mt-0.5">Test deterministic financial boundary rules in real time</p>
           </div>
         </div>
-        <span className="text-xs px-2.5 py-1 rounded-full bg-slate-900 text-slate-300 border border-slate-800 font-mono">
-          Pure Deterministic Rules
+        <span className="text-xs px-2.5 py-1 rounded-full bg-slate-900 text-slate-300 border border-slate-800 tracking-wider">
+          DETERMINISTIC RULES
         </span>
       </div>
 
@@ -165,34 +165,34 @@ export function PolicyGateDemo() {
       {/* Policy Evaluation Decision Result */}
       {decision && (
         <div
-          className={`p-4 rounded-xl border flex flex-col gap-2 transition-all ${
+          className={`p-6 rounded-2xl border-2 flex flex-col gap-3 transition-all ${
             decision.allowed
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.15)]"
           }`}
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between border-b border-current/20 pb-4">
+            <div className="flex items-center gap-3">
               {decision.allowed ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
               ) : (
-                <AlertOctagon className="w-5 h-5 text-rose-400" />
+                <AlertOctagon className="w-8 h-8 text-rose-400" />
               )}
-              <span className="font-bold text-base tracking-wide font-mono">
-                {decision.allowed ? "ALLOWED" : "DENIED"}
+              <span className="font-black text-2xl tracking-widest">
+                {decision.allowed ? "ACTION AUTHORIZED" : "ACTION DENIED"}
               </span>
             </div>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-900/80 border border-slate-800">
+            <span className="text-xs font-mono px-3 py-1 rounded-md bg-slate-900/80 border border-slate-800">
               {decision.policyId}
             </span>
           </div>
 
-          <p className="text-sm font-sans">{decision.reason}</p>
+          <p className="text-base text-slate-200 mt-2">{decision.reason}</p>
 
           {decision.violations.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-rose-500/20">
-              <span className="text-xs font-mono uppercase tracking-wider text-rose-300">Violations:</span>
-              <ul className="list-disc list-inside text-xs mt-1 space-y-1 text-rose-200">
+            <div className="mt-3 p-4 rounded-xl bg-rose-950/40 border border-rose-500/20">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 block">Violated Invariants:</span>
+              <ul className="list-disc list-inside text-sm space-y-1.5 text-rose-200">
                 {decision.violations.map((v, i) => (
                   <li key={i}>{v}</li>
                 ))}

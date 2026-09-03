@@ -72,6 +72,7 @@ export interface ExperimentSummaryMetrics {
   
   incrementalRecoveredPaise: string;
   netRoiIncreasePaise: string;
+  absoluteLiftPercent: number;
   recoveryLiftPercent: number;
   
   discountCostPaise: string;

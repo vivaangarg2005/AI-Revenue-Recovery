@@ -73,12 +73,12 @@ export function SimulationLabScreen() {
       {/* Header & Run Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h2 className="font-bold text-lg text-white flex items-center gap-2 font-mono">
+          <h2 className="font-bold text-lg text-white flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-indigo-400" />
-            500-Case Revenue Recovery Experiment Lab
+            500-CASE COUNTERFACTUAL EVALUATION
           </h2>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Counterfactual Evaluation: Control Baseline (250) vs RECOVER-AI Engine (250)
+          <p className="text-sm text-slate-400 mt-1">
+            Evaluating performance across 500 synthetic cases generated with reproducible seeds.
           </p>
         </div>
 
@@ -149,27 +149,27 @@ export function SimulationLabScreen() {
       )}
 
       {/* Multi-Seed Robustness Verification Table */}
-      <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3 font-mono text-xs">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-          <h3 className="font-bold text-sm text-white">Multi-Seed Robustness Evaluation (4 Seeds)</h3>
-          <span className="text-emerald-400 text-[11px] font-bold">Average Lift: +69.00%</span>
+      <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+          <h3 className="font-bold text-white">Multi-Seed Robustness Evaluation (4 Seeds)</h3>
+          <span className="text-emerald-400 text-xs font-bold bg-emerald-950/30 px-2.5 py-1 rounded-md border border-emerald-500/20">Average Lift: +69.00%</span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
-          <table className="w-full text-left">
-            <thead className="bg-slate-900 text-slate-400 border-b border-slate-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/50">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800 text-xs">
               <tr>
-                <th className="p-3">Seed (Click to run)</th>
-                <th className="p-3">Control Net (₹)</th>
-                <th className="p-3">RECOVER-AI Net (₹)</th>
-                <th className="p-3">Incremental (₹)</th>
-                <th className="p-3">Recovery Lift</th>
-                <th className="p-3">AI Accuracy</th>
-                <th className="p-3">Escalations</th>
-                <th className="p-3">Unneeded %</th>
+                <th className="p-3 font-medium">Seed (Click to run)</th>
+                <th className="p-3 font-medium text-right">Control Net (₹)</th>
+                <th className="p-3 font-bold text-emerald-400 text-right">RECOVER-AI Net (₹)</th>
+                <th className="p-3 font-medium text-right">Incremental (₹)</th>
+                <th className="p-3 font-bold text-emerald-400 text-center">Recovery Lift</th>
+                <th className="p-3 font-medium text-center">AI Accuracy</th>
+                <th className="p-3 font-medium text-center">Escalations</th>
+                <th className="p-3 font-medium text-center">Unneeded %</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300 cursor-pointer">
+            <tbody className="divide-y divide-slate-800/80 text-slate-300 cursor-pointer">
               {multiSeedData.map((row) => {
                 const isActive = (lastExecutedSeed ?? seed) === row.seed;
                 return (
@@ -185,17 +185,17 @@ export function SimulationLabScreen() {
                         : "hover:bg-slate-900/60"
                     }`}
                   >
-                    <td className="p-3 font-bold text-indigo-300 flex items-center gap-1.5">
+                    <td className="p-3 font-mono text-xs text-indigo-300 flex items-center gap-1.5">
                       {isActive && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />}
                       {row.seed}
                     </td>
-                    <td className="p-3 text-slate-400">{row.controlNet}</td>
-                    <td className="p-3 font-bold text-emerald-400">{row.treatNet}</td>
-                    <td className="p-3 font-bold text-indigo-400">{row.incremental}</td>
-                    <td className="p-3 font-bold text-emerald-400">{row.lift}</td>
-                    <td className="p-3 text-purple-300">{row.accuracy}</td>
-                    <td className="p-3 text-slate-400">{row.escalations}</td>
-                    <td className="p-3 text-slate-400">{row.unneeded}</td>
+                    <td className="p-3 text-slate-400 font-mono text-xs text-right">{row.controlNet}</td>
+                    <td className="p-3 font-bold text-emerald-400 font-mono text-xs text-right">{row.treatNet}</td>
+                    <td className="p-3 font-bold text-indigo-400 font-mono text-xs text-right">{row.incremental}</td>
+                    <td className="p-3 font-bold text-emerald-400 font-mono text-xs text-center">{row.lift}</td>
+                    <td className="p-3 text-purple-300 font-mono text-xs text-center">{row.accuracy}</td>
+                    <td className="p-3 text-slate-400 font-mono text-xs text-center">{row.escalations}</td>
+                    <td className="p-3 text-slate-400 font-mono text-xs text-center">{row.unneeded}</td>
                   </tr>
                 );
               })}

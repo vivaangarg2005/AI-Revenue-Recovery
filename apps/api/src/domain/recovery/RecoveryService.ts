@@ -124,7 +124,11 @@ export class RecoveryService {
     await this.updateCaseState(caseId, FSMState.DIAGNOSED, "AI_DIAGNOSIS_DONE", correlationId);
 
     // STEP 4: Action Mapping
-    const proposedActionType = this.mapStrategyToAction(diagnosisResult.recommendedStrategy);
+    let proposedActionType = this.mapStrategyToAction(diagnosisResult.recommendedStrategy);
+
+    if (diagnosisResult.confidence < 0.70) {
+      proposedActionType = ActionType.ESCALATE;
+    }
 
     // STEP 5: Policy Gatekeeper Evaluation
     const policyDecision = evaluatePolicy({

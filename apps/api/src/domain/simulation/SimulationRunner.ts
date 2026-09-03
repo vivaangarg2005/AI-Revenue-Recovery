@@ -228,6 +228,10 @@ export class SimulationRunner {
     if (strategy === "PAYMENT_LINK") actionType = ActionType.CREATE_PAYMENT_LINK;
     if (strategy === "DISCOUNT_NUDGE") actionType = ActionType.OFFER_DISCOUNT;
     if (strategy === "HUMAN_ESCALATION") actionType = ActionType.ESCALATE;
+    
+    if (diagnosis.confidence < 0.70) {
+      actionType = ActionType.ESCALATE;
+    }
 
     const discountPercent = actionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0;
 
@@ -377,6 +381,8 @@ export class SimulationRunner {
       ? Number(((treatmentNetPaise - controlNetPaise) * BigInt(10000)) / controlNetPaise) / 100
       : 0;
 
+    const absoluteLiftPercent = Number((treatmentRate - controlRate).toFixed(2));
+
     const diagnosisAccuracy = (correctDiagnoses / treatmentOutcomes.length) * 100;
     const p2pAccuracy = p2pTotal > 0 ? (p2pCorrect / p2pTotal) * 100 : 100;
     const unnecessaryRate = (unnecessaryInterventions / treatmentOutcomes.length) * 100;
@@ -400,6 +406,7 @@ export class SimulationRunner {
 
       incrementalRecoveredPaise: incrementalRecoveredPaise.toString(),
       netRoiIncreasePaise: incrementalRecoveredPaise.toString(),
+      absoluteLiftPercent,
       recoveryLiftPercent: recoveryLift,
 
       discountCostPaise: discountCostPaise.toString(),

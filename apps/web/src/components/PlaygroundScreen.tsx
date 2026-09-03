@@ -6,12 +6,12 @@ export function PlaygroundScreen() {
   return (
     <div className="space-y-8 font-sans">
       <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2 font-mono">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-purple-400" />
-          AI & Policy Gatekeeper Engine Interactive Playground
+          Interactive Demo Playgrounds
         </h2>
-        <p className="text-xs text-slate-400 font-mono mt-0.5">
-          Test structured AI payment failure diagnosis, Promise-to-Pay extraction, prompt injection defense, and hard policy boundary overrides.
+        <p className="text-sm text-slate-400 mt-1">
+          Test the LLM reasoning engine and the deterministic policy boundary in isolation.
         </p>
       </div>
 

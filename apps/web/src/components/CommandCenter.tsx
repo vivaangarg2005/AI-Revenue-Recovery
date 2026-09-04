@@ -476,7 +476,7 @@ export function CommandCenter() {
                   className="hover:bg-slate-800/50 cursor-pointer transition-colors"
                 >
                   <td className="p-3 font-mono text-xs text-indigo-300">{c.id.slice(0, 8)}...</td>
-                  <td className="p-3 text-slate-300">{c.failureCode || "EXPIRED_CARD"}</td>
+                  <td className="p-3 text-slate-300">{c.FailureEvent?.[0]?.rawProviderCode || c.failureCode || "EXPIRED_CARD"}</td>
                   <td className="p-3 text-white font-mono text-right text-xs">₹{(Number(c.amountDuePaise || 0) / 100).toLocaleString("en-IN")}</td>
                   <td className="p-3 text-center">
                     <span

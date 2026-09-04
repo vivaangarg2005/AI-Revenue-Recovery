@@ -519,7 +519,11 @@ recoveryRouter.get("/recovery-cases", async (_req: Request, res: Response) => {
   try {
     const cases = await prisma.recoveryCase.findMany({
       orderBy: { createdAt: "desc" },
-      include: { subscription: { include: { customer: true } }, invoice: true },
+      include: { 
+        subscription: { include: { customer: true } }, 
+        invoice: true,
+        FailureEvent: { orderBy: { occurredAt: "desc" }, take: 1 }
+      },
     });
     const memCases = Array.from(inMemoryCases.values());
     res.json(serializeBigInt([...cases, ...memCases]));

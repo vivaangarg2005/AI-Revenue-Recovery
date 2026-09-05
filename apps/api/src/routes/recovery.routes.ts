@@ -27,7 +27,10 @@ const CreateCaseSchema = z.object({
   failureCode: z.string().min(1),
   failureMessage: z.string(),
   amountPaise: PaiseSchema.optional().default(99900n as any),
-  customerTier: z.enum(["STANDARD", "ENTERPRISE"]).optional().default("STANDARD"),
+  customerTier: z
+    .enum(["STANDARD", "ENTERPRISE"])
+    .optional()
+    .default("STANDARD"),
   isOptedOut: z.boolean().optional().default(false),
 });
 
@@ -70,7 +73,9 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
     const recoveryCase = await prisma.$transaction(async (tx) => {
       // Ensure Customer exists or create customer
       let customer = await tx.customer.findFirst({
-        where: data.customerId ? { id: data.customerId } : { email: customerEmail },
+        where: data.customerId
+          ? { id: data.customerId }
+          : { email: customerEmail },
       });
 
       if (!customer) {
@@ -87,7 +92,9 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
 
       // Ensure Subscription exists
       let subscription = await tx.subscription.findFirst({
-        where: data.subscriptionId ? { id: data.subscriptionId } : { customerId: customer.id },
+        where: data.subscriptionId
+          ? { id: data.subscriptionId }
+          : { customerId: customer.id },
       });
 
       if (!subscription) {
@@ -103,8 +110,14 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
       // Ensure fresh Invoice exists for this new recovery case
       let invoice: any = null;
       if (data.invoiceId) {
-        const existing = await tx.invoice.findUnique({ where: { id: data.invoiceId } });
-        const hasCase = existing ? await tx.recoveryCase.findUnique({ where: { invoiceId: existing.id } }) : null;
+        const existing = await tx.invoice.findUnique({
+          where: { id: data.invoiceId },
+        });
+        const hasCase = existing
+          ? await tx.recoveryCase.findUnique({
+              where: { invoiceId: existing.id },
+            })
+          : null;
         if (existing && !hasCase) {
           invoice = existing;
         }
@@ -156,7 +169,10 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
           caseId: createdCase.id,
           eventType: "EVT_RECOVERY_CASE_CREATED",
           actor: "SYSTEM",
-          payload: { failureCode: data.failureCode, amountPaise: amountPaise.toString() },
+          payload: {
+            failureCode: data.failureCode,
+            amountPaise: amountPaise.toString(),
+          },
           previousHash: "genesis",
           currentHash: crypto
             .createHash("sha256")
@@ -233,231 +249,212 @@ recoveryRouter.post("/recovery-cases", async (req: Request, res: Response) => {
  * POST /api/v1/recovery-cases/:id/run
  * Executes the complete AI recovery workflow.
  */
-recoveryRouter.post("/recovery-cases/:id/run", async (req: Request, res: Response) => {
-  const { id } = req.params;
+recoveryRouter.post(
+  "/recovery-cases/:id/run",
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
 
-  try {
-    const result = await RecoveryService.runRecoveryWorkflow(id);
+    try {
+      const result = await RecoveryService.runRecoveryWorkflow(id);
 
-    // Return the full enriched case with all audit events, diagnosis, and transitions
-    const fullCase = await prisma.recoveryCase.findUnique({
-      where: { id },
-      include: {
-        subscription: {
-          include: { customer: true },
+      // Return the full enriched case with all audit events, diagnosis, and transitions
+      const fullCase = await prisma.recoveryCase.findUnique({
+        where: { id },
+        include: {
+          subscription: {
+            include: { customer: true },
+          },
+          invoice: true,
+          AIDiagnosis: { orderBy: { createdAt: "desc" } },
+          PolicyDecision: { orderBy: { createdAt: "desc" } },
+          RecoveryAction: { orderBy: { createdAt: "desc" } },
+          FailureEvent: { orderBy: { occurredAt: "desc" } },
+          P2PCommitment: { orderBy: { createdAt: "desc" } },
+          FSMTransition: { orderBy: { createdAt: "asc" } },
+          AuditEvent: { orderBy: { createdAt: "asc" } },
         },
-        invoice: true,
-        AIDiagnosis: { orderBy: { createdAt: "desc" } },
-        PolicyDecision: { orderBy: { createdAt: "desc" } },
-        RecoveryAction: { orderBy: { createdAt: "desc" } },
-        FailureEvent: { orderBy: { occurredAt: "desc" } },
-        P2PCommitment: { orderBy: { createdAt: "desc" } },
-        FSMTransition: { orderBy: { createdAt: "asc" } },
-        AuditEvent: { orderBy: { createdAt: "asc" } },
-      },
-    });
-
-    res.json(serializeBigInt({
-      ...(fullCase || {}),
-      ...result,
-    }));
-  } catch (err: any) {
-    const memCase = inMemoryCases.get(id);
-    if (memCase) {
-      const failureCode = memCase.FailureEvent[0]?.rawProviderCode || "GATEWAY_TIMEOUT";
-      const isPermanent = failureCode === "EXPIRED_CARD" || failureCode.includes("INVALID");
-
-      const category = isPermanent ? "PERMANENT_FAILURE" : "TEMPORARY_FAILURE";
-      const recommendedStrategy = isPermanent ? "HUMAN_ESCALATION" : "SCHEDULED_RETRY";
-      const rootCause = isPermanent
-        ? "Card details invalid or expired. Manual intervention required."
-        : "Temporary payment gateway timeout during automated debit retry.";
-
-      const diagnosis = {
-        id: `diag_${Date.now()}`,
-        category,
-        rootCause,
-        confidence: 0.95,
-        recommendedStrategy,
-        recommendedDelayDays: isPermanent ? 0 : 1,
-      };
-
-      const finalState = isPermanent ? "ESCALATED" : "PAID";
-      const recoveredPaise = isPermanent ? 0n : memCase.amountDuePaise;
-
-      memCase.fsmState = finalState;
-      memCase.recoveredPaise = recoveredPaise;
-      memCase.AIDiagnosis = [diagnosis, ...(memCase.AIDiagnosis || [])];
-      memCase.PolicyDecision = [
-        {
-          id: `pol_${Date.now()}`,
-          decision: "ALLOW",
-          policyId: "POL_FINTECH_RECOVER_V1",
-          violations: [],
-        },
-      ];
-      memCase.RecoveryAction = [
-        {
-          id: `act_${Date.now()}`,
-          actionType: isPermanent ? "ESCALATE" : "RETRY_PAYMENT",
-          executionStatus: "COMPLETED",
-        },
-      ];
-      memCase.FSMTransition.push({
-        id: `trans_${Date.now()}`,
-        fromState: "FAILED",
-        toState: finalState,
-        trigger: "WORKFLOW_EXECUTED",
-        actor: "SYSTEM",
-        correlationId: `corr_${Date.now()}`,
       });
 
-      inMemoryCases.set(id, memCase);
-      return res.json(serializeBigInt({ ...memCase, initialState: "FAILED", finalState, diagnosis }));
-    }
+      res.json(
+        serializeBigInt({
+          ...(fullCase || {}),
+          ...result,
+        }),
+      );
+    } catch (err: any) {
+      const memCase = inMemoryCases.get(id);
+      if (memCase) {
+        const failureCode =
+          memCase.FailureEvent[0]?.rawProviderCode || "GATEWAY_TIMEOUT";
+        const isPermanent =
+          failureCode === "EXPIRED_CARD" || failureCode.includes("INVALID");
 
-    res.status(500).json({
-      error: {
-        code: "WORKFLOW_EXECUTION_FAILED",
-        message: err.message || "Failed to run recovery workflow",
-      },
-    });
-  }
-});
+        const category = isPermanent
+          ? "PERMANENT_FAILURE"
+          : "TEMPORARY_FAILURE";
+        const recommendedStrategy = isPermanent
+          ? "HUMAN_ESCALATION"
+          : "SCHEDULED_RETRY";
+        const rootCause = isPermanent
+          ? "Card details invalid or expired. Manual intervention required."
+          : "Temporary payment gateway timeout during automated debit retry.";
+
+        const diagnosis = {
+          id: `diag_${Date.now()}`,
+          category,
+          rootCause,
+          confidence: 0.95,
+          recommendedStrategy,
+          recommendedDelayDays: isPermanent ? 0 : 1,
+        };
+
+        const finalState = isPermanent ? "ESCALATED" : "PAID";
+        const recoveredPaise = isPermanent ? 0n : memCase.amountDuePaise;
+
+        memCase.fsmState = finalState;
+        memCase.recoveredPaise = recoveredPaise;
+        memCase.AIDiagnosis = [diagnosis, ...(memCase.AIDiagnosis || [])];
+        memCase.PolicyDecision = [
+          {
+            id: `pol_${Date.now()}`,
+            decision: "ALLOW",
+            policyId: "POL_FINTECH_RECOVER_V1",
+            violations: [],
+          },
+        ];
+        memCase.RecoveryAction = [
+          {
+            id: `act_${Date.now()}`,
+            actionType: isPermanent ? "ESCALATE" : "RETRY_PAYMENT",
+            executionStatus: "COMPLETED",
+          },
+        ];
+        memCase.FSMTransition.push({
+          id: `trans_${Date.now()}`,
+          fromState: "FAILED",
+          toState: finalState,
+          trigger: "WORKFLOW_EXECUTED",
+          actor: "SYSTEM",
+          correlationId: `corr_${Date.now()}`,
+        });
+
+        inMemoryCases.set(id, memCase);
+        return res.json(
+          serializeBigInt({
+            ...memCase,
+            initialState: "FAILED",
+            finalState,
+            diagnosis,
+          }),
+        );
+      }
+
+      res.status(500).json({
+        error: {
+          code: "WORKFLOW_EXECUTION_FAILED",
+          message: err.message || "Failed to run recovery workflow",
+        },
+      });
+    }
+  },
+);
 
 /**
  * POST /api/v1/recovery-cases/:id/p2p
  * Ingests inbound P2P message, extracts intent, and updates FSM accordingly.
  */
-recoveryRouter.post("/recovery-cases/:id/p2p", async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const parseResult = P2PSchema.safeParse(req.body);
+recoveryRouter.post(
+  "/recovery-cases/:id/p2p",
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const parseResult = P2PSchema.safeParse(req.body);
 
-  if (!parseResult.success) {
-    res.status(400).json({
-      error: {
-        code: "VALIDATION_ERROR",
-        message: "Invalid P2P payload",
-        details: parseResult.error.flatten(),
-      },
-    });
-    return;
-  }
-
-  const correlationId = `corr_${crypto.randomBytes(8).toString("hex")}`;
-
-  try {
-    const recoveryCase = await prisma.recoveryCase.findUnique({
-      where: { id },
-      include: {
-        subscription: {
-          include: { customer: true },
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid P2P payload",
+          details: parseResult.error.flatten(),
         },
-      },
-    });
-
-    if (!recoveryCase) {
-      res.status(404).json({ error: { code: "NOT_FOUND", message: "Recovery case not found" } });
+      });
       return;
     }
 
-    const customer = recoveryCase.subscription?.customer || { tier: "STANDARD", isOptedOut: false };
+    const correlationId = `corr_${crypto.randomBytes(8).toString("hex")}`;
 
-    // Call AI P2P Extractor
-    const aiProvider = getAIProvider();
-    const p2pResult = await aiProvider.extractPromiseToPay(parseResult.data);
-
-    // Save P2P Commitment record
-    const p2pCommitment = await prisma.p2PCommitment.create({
-      data: {
-        caseId: id,
-        rawCustomerMessage: parseResult.data.message,
-        intent: p2pResult.intent,
-        confidence: p2pResult.confidence,
-        promisedIsoDate: p2pResult.promisedDate ? new Date(p2pResult.promisedDate) : null,
-      },
-    });
-
-    await prisma.auditEvent.create({
-      data: {
-        caseId: id,
-        eventType: "EVT_P2P_RECEIVED",
-        actor: "CUSTOMER",
-        payload: { intent: p2pResult.intent, confidence: p2pResult.confidence },
-        previousHash: "genesis",
-        currentHash: crypto
-          .createHash("sha256")
-          .update(`${id}:EVT_P2P_RECEIVED:${Date.now()}`)
-          .digest("hex"),
-        correlationId,
-      },
-    });
-
-    // Evaluate P2P rules: confidence >= 0.70 and valid intent
-    const isAccepted =
-      p2pResult.confidence >= 0.70 &&
-      (p2pResult.intent === "WILL_PAY" || p2pResult.intent === "REQUEST_DELAY") &&
-      !customer.isOptedOut;
-
-    if (isAccepted) {
-      // Transition FSM to P2P_PAUSED
-      if (!canTransition(recoveryCase.fsmState, FSMState.P2P_PAUSED)) {
-        res.status(409).json({
-          error: {
-            code: "INVALID_STATE_TRANSITION",
-            message: `${recoveryCase.fsmState} cannot transition to ${FSMState.P2P_PAUSED}`,
+    try {
+      const recoveryCase = await prisma.recoveryCase.findUnique({
+        where: { id },
+        include: {
+          subscription: {
+            include: { customer: true },
           },
-        });
+        },
+      });
+
+      if (!recoveryCase) {
+        res
+          .status(404)
+          .json({
+            error: { code: "NOT_FOUND", message: "Recovery case not found" },
+          });
         return;
       }
 
-      await prisma.recoveryCase.update({
-        where: { id },
-        data: { fsmState: FSMState.P2P_PAUSED },
-      });
+      const customer = recoveryCase.subscription?.customer || {
+        tier: "STANDARD",
+        isOptedOut: false,
+      };
 
-      await prisma.fSMTransition.create({
+      // Call AI P2P Extractor
+      const aiProvider = getAIProvider();
+      const p2pResult = await aiProvider.extractPromiseToPay(parseResult.data);
+
+      // Save P2P Commitment record
+      const p2pCommitment = await prisma.p2PCommitment.create({
         data: {
           caseId: id,
-          fromState: recoveryCase.fsmState,
-          toState: FSMState.P2P_PAUSED,
-          trigger: "P2P_COMMITMENT_ACCEPTED",
-          actor: "SYSTEM",
-          correlationId,
+          rawCustomerMessage: parseResult.data.message,
+          intent: p2pResult.intent,
+          confidence: p2pResult.confidence,
+          promisedIsoDate: p2pResult.promisedDate
+            ? new Date(p2pResult.promisedDate)
+            : null,
         },
       });
 
       await prisma.auditEvent.create({
         data: {
           caseId: id,
-          eventType: "EVT_P2P_ACCEPTED",
-          actor: "SYSTEM",
-          payload: { promisedDate: p2pResult.promisedDate },
+          eventType: "EVT_P2P_RECEIVED",
+          actor: "CUSTOMER",
+          payload: {
+            intent: p2pResult.intent,
+            confidence: p2pResult.confidence,
+          },
           previousHash: "genesis",
           currentHash: crypto
             .createHash("sha256")
-            .update(`${id}:EVT_P2P_ACCEPTED:${Date.now()}`)
+            .update(`${id}:EVT_P2P_RECEIVED:${Date.now()}`)
             .digest("hex"),
           correlationId,
         },
       });
 
-      res.json({
-        accepted: true,
-        fsmState: FSMState.P2P_PAUSED,
-        p2p: p2pCommitment,
-      });
-    } else {
-      // Reject commitment or escalate if refusal
-      const targetState =
-        p2pResult.intent === "REFUSES_PAYMENT" ? FSMState.ESCALATED : recoveryCase.fsmState;
+      // Evaluate P2P rules: confidence >= 0.70 and valid intent
+      const isAccepted =
+        p2pResult.confidence >= 0.7 &&
+        (p2pResult.intent === "WILL_PAY" ||
+          p2pResult.intent === "REQUEST_DELAY") &&
+        !customer.isOptedOut;
 
-      if (targetState !== recoveryCase.fsmState) {
-        if (!canTransition(recoveryCase.fsmState, targetState)) {
+      if (isAccepted) {
+        // Transition FSM to P2P_PAUSED
+        if (!canTransition(recoveryCase.fsmState, FSMState.P2P_PAUSED)) {
           res.status(409).json({
             error: {
               code: "INVALID_STATE_TRANSITION",
-              message: `${recoveryCase.fsmState} cannot transition to ${targetState}`,
+              message: `${recoveryCase.fsmState} cannot transition to ${FSMState.P2P_PAUSED}`,
             },
           });
           return;
@@ -465,51 +462,109 @@ recoveryRouter.post("/recovery-cases/:id/p2p", async (req: Request, res: Respons
 
         await prisma.recoveryCase.update({
           where: { id },
-          data: { fsmState: targetState },
+          data: { fsmState: FSMState.P2P_PAUSED },
         });
 
         await prisma.fSMTransition.create({
           data: {
             caseId: id,
             fromState: recoveryCase.fsmState,
-            toState: targetState,
-            trigger: "P2P_REFUSAL_ESCALATED",
+            toState: FSMState.P2P_PAUSED,
+            trigger: "P2P_COMMITMENT_ACCEPTED",
             actor: "SYSTEM",
             correlationId,
           },
         });
-      }
 
-      await prisma.auditEvent.create({
-        data: {
-          caseId: id,
-          eventType: "EVT_P2P_REJECTED",
-          actor: "SYSTEM",
-          payload: { intent: p2pResult.intent, confidence: p2pResult.confidence },
-          previousHash: "genesis",
-          currentHash: crypto
-            .createHash("sha256")
-            .update(`${id}:EVT_P2P_REJECTED:${Date.now()}`)
-            .digest("hex"),
-          correlationId,
+        await prisma.auditEvent.create({
+          data: {
+            caseId: id,
+            eventType: "EVT_P2P_ACCEPTED",
+            actor: "SYSTEM",
+            payload: { promisedDate: p2pResult.promisedDate },
+            previousHash: "genesis",
+            currentHash: crypto
+              .createHash("sha256")
+              .update(`${id}:EVT_P2P_ACCEPTED:${Date.now()}`)
+              .digest("hex"),
+            correlationId,
+          },
+        });
+
+        res.json({
+          accepted: true,
+          fsmState: FSMState.P2P_PAUSED,
+          p2p: p2pCommitment,
+        });
+      } else {
+        // Reject commitment or escalate if refusal
+        const targetState =
+          p2pResult.intent === "REFUSES_PAYMENT"
+            ? FSMState.ESCALATED
+            : recoveryCase.fsmState;
+
+        if (targetState !== recoveryCase.fsmState) {
+          if (!canTransition(recoveryCase.fsmState, targetState)) {
+            res.status(409).json({
+              error: {
+                code: "INVALID_STATE_TRANSITION",
+                message: `${recoveryCase.fsmState} cannot transition to ${targetState}`,
+              },
+            });
+            return;
+          }
+
+          await prisma.recoveryCase.update({
+            where: { id },
+            data: { fsmState: targetState },
+          });
+
+          await prisma.fSMTransition.create({
+            data: {
+              caseId: id,
+              fromState: recoveryCase.fsmState,
+              toState: targetState,
+              trigger: "P2P_REFUSAL_ESCALATED",
+              actor: "SYSTEM",
+              correlationId,
+            },
+          });
+        }
+
+        await prisma.auditEvent.create({
+          data: {
+            caseId: id,
+            eventType: "EVT_P2P_REJECTED",
+            actor: "SYSTEM",
+            payload: {
+              intent: p2pResult.intent,
+              confidence: p2pResult.confidence,
+            },
+            previousHash: "genesis",
+            currentHash: crypto
+              .createHash("sha256")
+              .update(`${id}:EVT_P2P_REJECTED:${Date.now()}`)
+              .digest("hex"),
+            correlationId,
+          },
+        });
+
+        res.json({
+          accepted: false,
+          fsmState: targetState,
+          p2p: p2pCommitment,
+        });
+      }
+    } catch (err: any) {
+      res.status(500).json({
+        error: {
+          code: "P2P_PROCESSING_FAILED",
+          message: err.message || "Failed to process P2P message",
         },
       });
-
-      res.json({
-        accepted: false,
-        fsmState: targetState,
-        p2p: p2pCommitment,
-      });
     }
-  } catch (err: any) {
-    res.status(500).json({
-      error: {
-        code: "P2P_PROCESSING_FAILED",
-        message: err.message || "Failed to process P2P message",
-      },
-    });
-  }
-});
+  },
+);
 
 /**
  * GET /api/v1/recovery-cases
@@ -519,10 +574,10 @@ recoveryRouter.get("/recovery-cases", async (_req: Request, res: Response) => {
   try {
     const cases = await prisma.recoveryCase.findMany({
       orderBy: { createdAt: "desc" },
-      include: { 
-        subscription: { include: { customer: true } }, 
+      include: {
+        subscription: { include: { customer: true } },
         invoice: true,
-        FailureEvent: { orderBy: { occurredAt: "desc" }, take: 1 }
+        FailureEvent: { orderBy: { occurredAt: "desc" }, take: 1 },
       },
     });
     const memCases = Array.from(inMemoryCases.values());
@@ -537,40 +592,47 @@ recoveryRouter.get("/recovery-cases", async (_req: Request, res: Response) => {
  * GET /api/v1/recovery-cases/:id
  * Fetches complete details of a recovery case.
  */
-recoveryRouter.get("/recovery-cases/:id", async (req: Request, res: Response) => {
-  const { id } = req.params;
+recoveryRouter.get(
+  "/recovery-cases/:id",
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
 
-  try {
-    const recoveryCase = await prisma.recoveryCase.findUnique({
-      where: { id },
-      include: {
-        subscription: {
-          include: { customer: true },
+    try {
+      const recoveryCase = await prisma.recoveryCase.findUnique({
+        where: { id },
+        include: {
+          subscription: {
+            include: { customer: true },
+          },
+          invoice: true,
+          AIDiagnosis: { orderBy: { createdAt: "desc" } },
+          PolicyDecision: { orderBy: { createdAt: "desc" } },
+          RecoveryAction: { orderBy: { createdAt: "desc" } },
+          FailureEvent: { orderBy: { occurredAt: "desc" } },
+          P2PCommitment: { orderBy: { createdAt: "desc" } },
+          FSMTransition: { orderBy: { createdAt: "asc" } },
+          AuditEvent: { orderBy: { createdAt: "asc" } },
         },
-        invoice: true,
-        AIDiagnosis: { orderBy: { createdAt: "desc" } },
-        PolicyDecision: { orderBy: { createdAt: "desc" } },
-        RecoveryAction: { orderBy: { createdAt: "desc" } },
-        FailureEvent: { orderBy: { occurredAt: "desc" } },
-        P2PCommitment: { orderBy: { createdAt: "desc" } },
-        FSMTransition: { orderBy: { createdAt: "asc" } },
-        AuditEvent: { orderBy: { createdAt: "asc" } },
-      },
-    });
+      });
 
-    if (recoveryCase) {
-      res.json(serializeBigInt(recoveryCase));
+      if (recoveryCase) {
+        res.json(serializeBigInt(recoveryCase));
+        return;
+      }
+    } catch (err: any) {
+      // Database offline fallback check below
+    }
+
+    const memCase = inMemoryCases.get(id);
+    if (memCase) {
+      res.json(serializeBigInt(memCase));
       return;
     }
-  } catch (err: any) {
-    // Database offline fallback check below
-  }
 
-  const memCase = inMemoryCases.get(id);
-  if (memCase) {
-    res.json(serializeBigInt(memCase));
-    return;
-  }
-
-  res.status(404).json({ error: { code: "NOT_FOUND", message: "Recovery case not found" } });
-});
+    res
+      .status(404)
+      .json({
+        error: { code: "NOT_FOUND", message: "Recovery case not found" },
+      });
+  },
+);

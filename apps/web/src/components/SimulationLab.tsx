@@ -35,7 +35,9 @@ export function SimulationLab() {
       const data = await res.json();
       setMetrics(data);
 
-      const casesRes = await fetch(`/api/v1/simulations/${data.simulationId}/cases`);
+      const casesRes = await fetch(
+        `/api/v1/simulations/${data.simulationId}/cases`,
+      );
       const casesData = await casesRes.json();
       setCases(casesData);
     } catch (err) {
@@ -56,7 +58,8 @@ export function SimulationLab() {
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 text-amber-400 shrink-0" />
           <span>
-            <strong>COUNTERFACTUAL EXPERIMENT:</strong> 500-case reproducible synthetic batch (not production payment data).
+            <strong>COUNTERFACTUAL EXPERIMENT:</strong> 500-case reproducible
+            synthetic batch (not production payment data).
           </span>
         </div>
         <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[11px]">
@@ -72,7 +75,8 @@ export function SimulationLab() {
             500-Case Revenue Recovery Experiment Lab
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Counterfactual Evaluation: Control Baseline (250) vs RECOVER-AI Engine (250)
+            Counterfactual Evaluation: Control Baseline (250) vs RECOVER-AI
+            Engine (250)
           </p>
         </div>
 
@@ -90,17 +94,29 @@ export function SimulationLab() {
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-mono">Total Risk (500 Cases)</div>
-            <div className="text-lg font-bold text-white mt-1 font-mono">
-              ₹{(Number(metrics.totalRiskPaise || 0) / 100).toLocaleString("en-IN")}
+            <div className="text-[11px] text-slate-400 font-mono">
+              Total Risk (500 Cases)
             </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-1">250 Control / 250 Treatment</div>
+            <div className="text-lg font-bold text-white mt-1 font-mono">
+              ₹
+              {(Number(metrics.totalRiskPaise || 0) / 100).toLocaleString(
+                "en-IN",
+              )}
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono mt-1">
+              250 Control / 250 Treatment
+            </div>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-mono">Control Net Recovered</div>
+            <div className="text-[11px] text-slate-400 font-mono">
+              Control Net Recovered
+            </div>
             <div className="text-lg font-bold text-slate-300 mt-1 font-mono">
-              ₹{(Number(metrics.controlNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+              ₹
+              {(
+                Number(metrics.controlNetRecoveredPaise || 0) / 100
+              ).toLocaleString("en-IN")}
             </div>
             <div className="text-[10px] text-slate-500 font-mono mt-1">
               Rate: {metrics.controlRecoveryRatePercent}%
@@ -108,9 +124,14 @@ export function SimulationLab() {
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-mono">RECOVER-AI Net Recovered</div>
+            <div className="text-[11px] text-slate-400 font-mono">
+              RECOVER-AI Net Recovered
+            </div>
             <div className="text-lg font-bold text-emerald-400 mt-1 font-mono">
-              ₹{(Number(metrics.treatmentNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+              ₹
+              {(
+                Number(metrics.treatmentNetRecoveredPaise || 0) / 100
+              ).toLocaleString("en-IN")}
             </div>
             <div className="text-[10px] text-emerald-500/80 font-mono mt-1">
               Rate: {metrics.treatmentRecoveryRatePercent}%
@@ -118,12 +139,15 @@ export function SimulationLab() {
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400 font-mono">AI Diagnosis Accuracy</div>
+            <div className="text-[11px] text-slate-400 font-mono">
+              AI Diagnosis Accuracy
+            </div>
             <div className="text-lg font-bold text-purple-400 mt-1 font-mono">
               {metrics.aiDiagnosisAccuracyPercent}%
             </div>
             <div className="text-[10px] text-slate-500 font-mono mt-1">
-              Escalations: {metrics.escalationCount} | Policy Blocks: {metrics.policyBlockCount}
+              Escalations: {metrics.escalationCount} | Policy Blocks:{" "}
+              {metrics.policyBlockCount}
             </div>
           </div>
         </div>
@@ -155,8 +179,12 @@ export function SimulationLab() {
                   key={c.caseIndex}
                   className="hover:bg-slate-800/50 transition-colors"
                 >
-                  <td className="p-3 font-bold text-slate-400">#{c.caseIndex}</td>
-                  <td className="p-3 text-white">₹{(Number(c.amountPaise) / 100).toFixed(0)}</td>
+                  <td className="p-3 font-bold text-slate-400">
+                    #{c.caseIndex}
+                  </td>
+                  <td className="p-3 text-white">
+                    ₹{(Number(c.amountPaise) / 100).toFixed(0)}
+                  </td>
                   <td className="p-3">
                     <span
                       className={`px-2 py-0.5 rounded text-[11px] ${
@@ -168,18 +196,22 @@ export function SimulationLab() {
                       {c.control.finalState} (Retries: {c.control.retryCount})
                     </span>
                   </td>
-                  <td className="p-3 text-purple-300">{c.treatment.aiCategory}</td>
-                  <td className="p-3 text-indigo-300">{c.treatment.strategyUsed}</td>
+                  <td className="p-3 text-purple-300">
+                    {c.treatment.aiCategory}
+                  </td>
+                  <td className="p-3 text-indigo-300">
+                    {c.treatment.strategyUsed}
+                  </td>
                   <td className="p-3">
                     <span
                       className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                         c.treatment.finalState === "PAID"
                           ? "bg-emerald-500/20 text-emerald-400"
                           : c.treatment.finalState === "POLICY_BLOCKED"
-                          ? "bg-rose-500/20 text-rose-400"
-                          : c.treatment.finalState === "P2P_PAUSED"
-                          ? "bg-amber-500/20 text-amber-400"
-                          : "bg-slate-800 text-slate-300"
+                            ? "bg-rose-500/20 text-rose-400"
+                            : c.treatment.finalState === "P2P_PAUSED"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-slate-800 text-slate-300"
                       }`}
                     >
                       {c.treatment.finalState}

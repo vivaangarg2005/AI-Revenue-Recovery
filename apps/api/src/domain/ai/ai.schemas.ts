@@ -33,7 +33,7 @@ export const DiagnosisInputSchema = z.object({
         date: z.string(),
         status: z.string(),
         failureCode: z.string().optional(),
-      })
+      }),
     )
     .optional()
     .default([]),

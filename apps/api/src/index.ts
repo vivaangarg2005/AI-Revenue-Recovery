@@ -4,7 +4,9 @@ import { prisma } from "./infrastructure/database/prisma.js";
 import { getRedisClient } from "./infrastructure/redis/redis.js";
 
 const server = app.listen(env.PORT, () => {
-  console.log(`🚀 RECOVER-AI API Server listening on port ${env.PORT} [${env.NODE_ENV}]`);
+  console.log(
+    `🚀 RECOVER-AI API Server listening on port ${env.PORT} [${env.NODE_ENV}]`,
+  );
 });
 
 // Graceful Shutdown

@@ -4,7 +4,11 @@ import { ActionType } from "../policy/policy.types.js";
 import { MockPaymentProvider } from "../payment/MockPaymentProvider.js";
 import { PseudoRandom } from "./PseudoRandom.js";
 import { SimulationGenerator } from "./SimulationGenerator.js";
-import { SyntheticCase, CaseOutcome, ExperimentSummaryMetrics } from "./simulation.types.js";
+import {
+  SyntheticCase,
+  CaseOutcome,
+  ExperimentSummaryMetrics,
+} from "./simulation.types.js";
 
 export class SimulationRunner {
   private static paymentProvider = new MockPaymentProvider();
@@ -17,7 +21,8 @@ export class SimulationRunner {
     controlOutcomes: CaseOutcome[];
     treatmentOutcomes: CaseOutcome[];
   }> {
-    const { controlCases, treatmentCases } = SimulationGenerator.generateBatch(seed);
+    const { controlCases, treatmentCases } =
+      SimulationGenerator.generateBatch(seed);
     const prngControl = new PseudoRandom(seed + 100);
     const prngTreatment = new PseudoRandom(seed + 100);
 
@@ -37,7 +42,12 @@ export class SimulationRunner {
     }
 
     // 3. Aggregate Summary Metrics
-    const metrics = this.calculateSummaryMetrics(seed, controlCases, controlOutcomes, treatmentOutcomes);
+    const metrics = this.calculateSummaryMetrics(
+      seed,
+      controlCases,
+      controlOutcomes,
+      treatmentOutcomes,
+    );
 
     return {
       metrics,
@@ -49,7 +59,10 @@ export class SimulationRunner {
   /**
    * Control Execution: Blind 3-retry static dunning baseline.
    */
-  private static runControlCase(cCase: SyntheticCase, prng: PseudoRandom): CaseOutcome {
+  private static runControlCase(
+    cCase: SyntheticCase,
+    prng: PseudoRandom,
+  ): CaseOutcome {
     const gt = cCase.groundTruth;
     let recoveredPaise = BigInt(0);
     let retryCount = 0;
@@ -101,7 +114,10 @@ export class SimulationRunner {
    * Treatment Execution: RECOVER-AI Engine (Adaptive Diagnosis -> Policy Gatekeeper -> Bounded Cadence).
    * ZERO GROUND-TRUTH LEAKAGE: Treatment observes ONLY failureCode, failureMessage, amountPaise, customerTier, & inbound text!
    */
-  private static async runTreatmentCase(tCase: SyntheticCase, prng: PseudoRandom): Promise<CaseOutcome> {
+  private static async runTreatmentCase(
+    tCase: SyntheticCase,
+    prng: PseudoRandom,
+  ): Promise<CaseOutcome> {
     const gt = tCase.groundTruth;
     const aiProvider = new MockAIProvider();
 
@@ -139,7 +155,10 @@ export class SimulationRunner {
       };
     }
 
-    if (diagnosis.category === "PERMANENT_FAILURE" || diagnosis.recommendedStrategy === "HUMAN_ESCALATION") {
+    if (
+      diagnosis.category === "PERMANENT_FAILURE" ||
+      diagnosis.recommendedStrategy === "HUMAN_ESCALATION"
+    ) {
       // Escalate based on AI diagnosis result
       return {
         caseId: tCase.id,
@@ -169,10 +188,15 @@ export class SimulationRunner {
 
     if (gt.inboundP2PMessage) {
       hasP2P = true;
-      const p2pRes = await aiProvider.extractPromiseToPay({ message: gt.inboundP2PMessage });
+      const p2pRes = await aiProvider.extractPromiseToPay({
+        message: gt.inboundP2PMessage,
+      });
       p2pIntent = p2pRes.intent;
 
-      if (p2pRes.confidence >= 0.70 && (p2pRes.intent === "WILL_PAY" || p2pRes.intent === "REQUEST_DELAY")) {
+      if (
+        p2pRes.confidence >= 0.7 &&
+        (p2pRes.intent === "WILL_PAY" || p2pRes.intent === "REQUEST_DELAY")
+      ) {
         // P2P commitment pauses automation without immediately counting money as recovered!
         return {
           caseId: tCase.id,
@@ -225,11 +249,12 @@ export class SimulationRunner {
     // STEP 4: Action Mapping to ActionType
     let actionType: ActionType = ActionType.RETRY_PAYMENT;
     const strategy = diagnosis.recommendedStrategy as string;
-    if (strategy === "PAYMENT_LINK") actionType = ActionType.CREATE_PAYMENT_LINK;
+    if (strategy === "PAYMENT_LINK")
+      actionType = ActionType.CREATE_PAYMENT_LINK;
     if (strategy === "DISCOUNT_NUDGE") actionType = ActionType.OFFER_DISCOUNT;
     if (strategy === "HUMAN_ESCALATION") actionType = ActionType.ESCALATE;
-    
-    if (diagnosis.confidence < 0.70) {
+
+    if (diagnosis.confidence < 0.7) {
       actionType = ActionType.ESCALATE;
     }
 
@@ -266,15 +291,26 @@ export class SimulationRunner {
       }
 
       // Execute Payment Action Routing
-      if (actionType === ActionType.CREATE_PAYMENT_LINK || actionType === ActionType.OFFER_DISCOUNT) {
+      if (
+        actionType === ActionType.CREATE_PAYMENT_LINK ||
+        actionType === ActionType.OFFER_DISCOUNT
+      ) {
         const linkRes = await this.paymentProvider.createPaymentLink(
           tCase.id,
           tCase.amountPaise,
           discountPercent,
-          `idem_link_${tCase.id}_${attempt}`
+          `idem_link_${tCase.id}_${attempt}`,
         );
-        if (linkRes.success || (gt.canRecover && (diagnosis.category === "EXPIRED_PAYMENT_METHOD" || diagnosis.category === "AUTHENTICATION_FAILURE"))) {
-          recoveredPaise = linkRes.amountRecoveredPaise > BigInt(0) ? linkRes.amountRecoveredPaise : tCase.amountPaise;
+        if (
+          linkRes.success ||
+          (gt.canRecover &&
+            (diagnosis.category === "EXPIRED_PAYMENT_METHOD" ||
+              diagnosis.category === "AUTHENTICATION_FAILURE"))
+        ) {
+          recoveredPaise =
+            linkRes.amountRecoveredPaise > BigInt(0)
+              ? linkRes.amountRecoveredPaise
+              : tCase.amountPaise;
           finalState = "PAID";
           break;
         }
@@ -283,9 +319,14 @@ export class SimulationRunner {
           tCase.id,
           tCase.amountPaise,
           `idem_retry_${tCase.id}_${attempt}`,
-          diagnosis.category
+          diagnosis.category,
         );
-        if (retryRes.success || (gt.canRecover && (diagnosis.category === "TEMPORARY_FAILURE" || (diagnosis.category === "INSUFFICIENT_FUNDS" && attempt >= 2)))) {
+        if (
+          retryRes.success ||
+          (gt.canRecover &&
+            (diagnosis.category === "TEMPORARY_FAILURE" ||
+              (diagnosis.category === "INSUFFICIENT_FUNDS" && attempt >= 2)))
+        ) {
           recoveredPaise = tCase.amountPaise;
           finalState = "PAID";
           break;
@@ -297,7 +338,9 @@ export class SimulationRunner {
       finalState = "HALTED";
     }
 
-    const discountCost = (recoveredPaise * BigInt(Math.round(discountPercent * 100))) / BigInt(10000);
+    const discountCost =
+      (recoveredPaise * BigInt(Math.round(discountPercent * 100))) /
+      BigInt(10000);
     const netRecovered = recoveredPaise - discountCost;
 
     // Evaluation Metric: Unnecessary intervention on unrecoverable case
@@ -334,7 +377,7 @@ export class SimulationRunner {
     seed: number,
     controlCases: SyntheticCase[],
     controlOutcomes: CaseOutcome[],
-    treatmentOutcomes: CaseOutcome[]
+    treatmentOutcomes: CaseOutcome[],
   ): ExperimentSummaryMetrics {
     let totalRiskPaise = BigInt(0);
     let controlGrossPaise = BigInt(0);
@@ -374,18 +417,28 @@ export class SimulationRunner {
     const controlNetPaise = controlGrossPaise;
     const incrementalRecoveredPaise = treatmentNetPaise - controlNetPaise;
 
-    const controlRate = Number((controlGrossPaise * BigInt(10000)) / totalRiskPaise) / 100;
-    const treatmentRate = Number((treatmentGrossPaise * BigInt(10000)) / totalRiskPaise) / 100;
+    const controlRate =
+      Number((controlGrossPaise * BigInt(10000)) / totalRiskPaise) / 100;
+    const treatmentRate =
+      Number((treatmentGrossPaise * BigInt(10000)) / totalRiskPaise) / 100;
 
-    const recoveryLift = controlNetPaise > BigInt(0)
-      ? Number(((treatmentNetPaise - controlNetPaise) * BigInt(10000)) / controlNetPaise) / 100
-      : 0;
+    const recoveryLift =
+      controlNetPaise > BigInt(0)
+        ? Number(
+            ((treatmentNetPaise - controlNetPaise) * BigInt(10000)) /
+              controlNetPaise,
+          ) / 100
+        : 0;
 
-    const absoluteLiftPercent = Number((treatmentRate - controlRate).toFixed(2));
+    const absoluteLiftPercent = Number(
+      (treatmentRate - controlRate).toFixed(2),
+    );
 
-    const diagnosisAccuracy = (correctDiagnoses / treatmentOutcomes.length) * 100;
+    const diagnosisAccuracy =
+      (correctDiagnoses / treatmentOutcomes.length) * 100;
     const p2pAccuracy = p2pTotal > 0 ? (p2pCorrect / p2pTotal) * 100 : 100;
-    const unnecessaryRate = (unnecessaryInterventions / treatmentOutcomes.length) * 100;
+    const unnecessaryRate =
+      (unnecessaryInterventions / treatmentOutcomes.length) * 100;
 
     return {
       simulationId: `sim_run_${seed}_${Date.now()}`,

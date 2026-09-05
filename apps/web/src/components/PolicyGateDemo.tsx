@@ -50,8 +50,12 @@ export function PolicyGateDemo() {
             <Sliders className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-base text-white tracking-wide">POLICY GATEKEEPER</h3>
-            <p className="text-sm text-slate-400 mt-0.5">Test deterministic financial boundary rules in real time</p>
+            <h3 className="font-bold text-base text-white tracking-wide">
+              POLICY GATEKEEPER
+            </h3>
+            <p className="text-sm text-slate-400 mt-0.5">
+              Test deterministic financial boundary rules in real time
+            </p>
           </div>
         </div>
         <span className="text-xs px-2.5 py-1 rounded-full bg-slate-900 text-slate-300 border border-slate-800 tracking-wider">
@@ -62,7 +66,9 @@ export function PolicyGateDemo() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Action Selection */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-mono text-slate-400">Proposed Action</label>
+          <label className="text-xs font-mono text-slate-400">
+            Proposed Action
+          </label>
           <select
             value={action}
             onChange={(e) => setAction(e.target.value)}
@@ -79,7 +85,9 @@ export function PolicyGateDemo() {
 
         {/* FSM State Selection */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-mono text-slate-400">Current FSM State</label>
+          <label className="text-xs font-mono text-slate-400">
+            Current FSM State
+          </label>
           <select
             value={currentState}
             onChange={(e) => setCurrentState(e.target.value)}
@@ -98,7 +106,9 @@ export function PolicyGateDemo() {
 
         {/* Retry Count */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-mono text-slate-400">Retry Count (Max 3)</label>
+          <label className="text-xs font-mono text-slate-400">
+            Retry Count (Max 3)
+          </label>
           <input
             type="number"
             min={0}
@@ -111,7 +121,9 @@ export function PolicyGateDemo() {
 
         {/* Discount Percent */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-mono text-slate-400">Discount % (Max 5%)</label>
+          <label className="text-xs font-mono text-slate-400">
+            Discount % (Max 5%)
+          </label>
           <input
             type="number"
             step="0.1"
@@ -125,7 +137,9 @@ export function PolicyGateDemo() {
 
         {/* AI Confidence */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-mono text-slate-400">AI Confidence (Min 0.70)</label>
+          <label className="text-xs font-mono text-slate-400">
+            AI Confidence (Min 0.70)
+          </label>
           <input
             type="number"
             step="0.01"
@@ -146,7 +160,9 @@ export function PolicyGateDemo() {
               onChange={(e) => setIsOptedOut(e.target.checked)}
               className="w-4 h-4 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950"
             />
-            <span className="text-xs font-mono text-slate-300">Customer Opted Out</span>
+            <span className="text-xs font-mono text-slate-300">
+              Customer Opted Out
+            </span>
           </label>
         </div>
       </div>
@@ -191,7 +207,9 @@ export function PolicyGateDemo() {
 
           {decision.violations.length > 0 && (
             <div className="mt-3 p-4 rounded-xl bg-rose-950/40 border border-rose-500/20">
-              <span className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 block">Violated Invariants:</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 block">
+                Violated Invariants:
+              </span>
               <ul className="list-disc list-inside text-sm space-y-1.5 text-rose-200">
                 {decision.violations.map((v, i) => (
                   <li key={i}>{v}</li>

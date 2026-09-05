@@ -10,7 +10,7 @@ describe("Policy Gatekeeper Domain Engine", () => {
     retryCount: 0,
     discountPercent: 0,
     isOptedOut: false,
-    aiConfidence: 0.90,
+    aiConfidence: 0.9,
   };
 
   it("1. Retry 0 -> allowed", () => {
@@ -101,7 +101,7 @@ describe("Policy Gatekeeper Domain Engine", () => {
     const res = evaluatePolicy({
       ...baseInput,
       action: ActionType.CREATE_PAYMENT_LINK,
-      aiConfidence: 0.70,
+      aiConfidence: 0.7,
     });
     expect(res.allowed).toBe(true);
   });

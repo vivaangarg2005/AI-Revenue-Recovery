@@ -15,7 +15,9 @@ interface HealthResponse {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<"COMMAND_CENTER" | "EXPERIMENT_LAB" | "PLAYGROUND">("COMMAND_CENTER");
+  const [activeTab, setActiveTab] = useState<
+    "COMMAND_CENTER" | "EXPERIMENT_LAB" | "PLAYGROUND"
+  >("COMMAND_CENTER");
   const [health, setHealth] = useState<HealthResponse | null>(null);
 
   useEffect(() => {
@@ -36,7 +38,9 @@ export function App() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-white tracking-wider text-lg">RECOVER-AI</span>
+                <span className="font-bold text-white tracking-wider text-lg">
+                  RECOVER-AI
+                </span>
                 <span className="px-2 py-0.5 rounded-md text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">
                   SIMULATION MODE
                 </span>
@@ -53,9 +57,13 @@ export function App() {
           {/* System Health Badge */}
           {health && (
             <div className="flex items-center gap-3 text-xs text-slate-400 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800 self-start md:self-auto">
-              <span className="text-purple-400 font-medium">AI: {(health as any).aiProviderName || "Gemini"}</span>
+              <span className="text-purple-400 font-medium">
+                AI: {(health as any).aiProviderName || "Gemini"}
+              </span>
               <span className="text-slate-600">|</span>
-              <span className="text-emerald-400 font-medium">Environment: Simulation</span>
+              <span className="text-emerald-400 font-medium">
+                Environment: Simulation
+              </span>
             </div>
           )}
         </div>

@@ -11,17 +11,20 @@ export function errorHandler(
   req: Request,
   res: Response,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const statusCode = err.statusCode || 500;
-  const correlationId = (req.headers["x-correlation-id"] as string) || "unknown";
+  const correlationId =
+    (req.headers["x-correlation-id"] as string) || "unknown";
 
   const errorResponse = {
     error: {
       code: err.code || "INTERNAL_SERVER_ERROR",
       message: err.message || "An unexpected error occurred",
       correlationId,
-      ...(process.env.NODE_ENV === "development" ? { details: err.details, stack: err.stack } : {}),
+      ...(process.env.NODE_ENV === "development"
+        ? { details: err.details, stack: err.stack }
+        : {}),
     },
   };
 

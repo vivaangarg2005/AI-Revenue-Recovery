@@ -10,13 +10,13 @@ export interface PaymentProvider {
   retryPayment(
     caseId: string,
     amountPaise: bigint,
-    idempotencyKey: string
+    idempotencyKey: string,
   ): Promise<PaymentResult>;
 
   createPaymentLink(
     caseId: string,
     amountPaise: bigint,
     discountPercent: number,
-    idempotencyKey: string
+    idempotencyKey: string,
   ): Promise<PaymentResult>;
 }

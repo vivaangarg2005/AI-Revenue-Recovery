@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { MockAIProvider } from "./MockAIProvider.js";
-import { DiagnosisOutputSchema, P2PExtractionOutputSchema } from "./ai.schemas.js";
+import {
+  DiagnosisOutputSchema,
+  P2PExtractionOutputSchema,
+} from "./ai.schemas.js";
 
 describe("AI Diagnosis & P2P Extraction Domain Engine", () => {
   const provider = new MockAIProvider();
@@ -15,7 +18,7 @@ describe("AI Diagnosis & P2P Extraction Domain Engine", () => {
       });
       expect(res.category).toBe("TEMPORARY_FAILURE");
       expect(res.recommendedStrategy).toBe("SCHEDULED_RETRY");
-      expect(res.confidence).toBeGreaterThanOrEqual(0.70);
+      expect(res.confidence).toBeGreaterThanOrEqual(0.7);
     });
 
     it("2. Should diagnose INSUFFICIENT_FUNDS", async () => {
@@ -60,7 +63,7 @@ describe("AI Diagnosis & P2P Extraction Domain Engine", () => {
         customerTier: "STANDARD",
       });
       expect(res.category).toBe("UNKNOWN");
-      expect(res.confidence).toBeLessThan(0.70);
+      expect(res.confidence).toBeLessThan(0.7);
     });
 
     it("6. Should reject invalid model output category via Zod", () => {
@@ -104,7 +107,7 @@ describe("AI Diagnosis & P2P Extraction Domain Engine", () => {
       });
       expect(res.intent).toBe("WILL_PAY");
       expect(res.promisedDate).not.toBeNull();
-      expect(res.confidence).toBeGreaterThanOrEqual(0.70);
+      expect(res.confidence).toBeGreaterThanOrEqual(0.7);
     });
 
     it("10. Should extract REQUEST_DELAY intent", async () => {
@@ -136,7 +139,7 @@ describe("AI Diagnosis & P2P Extraction Domain Engine", () => {
         message: "Maybe I'll check later.",
       });
       expect(res.intent).toBe("UNKNOWN");
-      expect(res.confidence).toBeLessThan(0.70);
+      expect(res.confidence).toBeLessThan(0.7);
     });
 
     it("14. Should neutralize prompt injection attempts safely", async () => {
@@ -145,7 +148,7 @@ describe("AI Diagnosis & P2P Extraction Domain Engine", () => {
       });
       expect(res.intent).toBe("UNKNOWN");
       expect(res.promisedDate).toBeNull();
-      expect(res.confidence).toBe(0.10);
+      expect(res.confidence).toBe(0.1);
     });
 
     it("15. Should reject invalid date format via Zod", () => {

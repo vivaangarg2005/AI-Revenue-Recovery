@@ -40,77 +40,90 @@ simulationRouter.post("/simulations", async (req: Request, res: Response) => {
  * GET /api/v1/simulations/latest
  * Fetches latest simulation summary metrics.
  */
-simulationRouter.get("/simulations/latest", async (req: Request, res: Response, next) => {
-  try {
-    let latest = cachedSimulations.get("latest");
+simulationRouter.get(
+  "/simulations/latest",
+  async (req: Request, res: Response, next) => {
+    try {
+      let latest = cachedSimulations.get("latest");
 
-    if (!latest) {
-      // Automatically run default simulation if not cached yet
-      latest = await SimulationRunner.runSimulation(20260822);
-      cachedSimulations.set(latest.metrics.simulationId, latest);
-      cachedSimulations.set("latest", latest);
+      if (!latest) {
+        // Automatically run default simulation if not cached yet
+        latest = await SimulationRunner.runSimulation(20260822);
+        cachedSimulations.set(latest.metrics.simulationId, latest);
+        cachedSimulations.set("latest", latest);
+      }
+
+      res.json(serializeBigInt(latest.metrics));
+    } catch (error) {
+      next(error);
     }
-
-    res.json(serializeBigInt(latest.metrics));
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 /**
  * GET /api/v1/simulations/:id
  * Fetches specific simulation summary metrics.
  */
-simulationRouter.get("/simulations/:id", async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const sim = cachedSimulations.get(id) || cachedSimulations.get("latest");
+simulationRouter.get(
+  "/simulations/:id",
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const sim = cachedSimulations.get(id) || cachedSimulations.get("latest");
 
-  if (!sim) {
-    res.status(404).json({ error: { code: "NOT_FOUND", message: "Simulation not found" } });
-    return;
-  }
+    if (!sim) {
+      res
+        .status(404)
+        .json({
+          error: { code: "NOT_FOUND", message: "Simulation not found" },
+        });
+      return;
+    }
 
-  res.json(serializeBigInt(sim.metrics));
-});
+    res.json(serializeBigInt(sim.metrics));
+  },
+);
 
 /**
  * GET /api/v1/simulations/:id/cases
  * Returns paired cases for side-by-side Control vs RECOVER-AI comparison.
  */
-simulationRouter.get("/simulations/:id/cases", async (req: Request, res: Response) => {
-  const { id } = req.params;
-  let sim = cachedSimulations.get(id) || cachedSimulations.get("latest");
+simulationRouter.get(
+  "/simulations/:id/cases",
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    let sim = cachedSimulations.get(id) || cachedSimulations.get("latest");
 
-  if (!sim) {
-    sim = await SimulationRunner.runSimulation(20260822);
-    cachedSimulations.set(sim.metrics.simulationId, sim);
-    cachedSimulations.set("latest", sim);
-  }
+    if (!sim) {
+      sim = await SimulationRunner.runSimulation(20260822);
+      cachedSimulations.set(sim.metrics.simulationId, sim);
+      cachedSimulations.set("latest", sim);
+    }
 
-  // Combine Control and Treatment outcomes into side-by-side comparison array
-  const pairedCases = sim.controlOutcomes.map((ctrl: any, idx: number) => {
-    const treat = sim.treatmentOutcomes[idx];
-    return {
-      caseIndex: idx + 1,
-      caseId: ctrl.caseId,
-      amountPaise: ctrl.amountPaise.toString(),
-      control: {
-        finalState: ctrl.finalState,
-        recoveredPaise: ctrl.recoveredPaise.toString(),
-        retryCount: ctrl.retryCount,
-      },
-      treatment: {
-        finalState: treat.finalState,
-        recoveredPaise: treat.recoveredPaise.toString(),
-        netRecoveredPaise: treat.netRecoveredPaise.toString(),
-        aiCategory: treat.aiDiagnosisCategory,
-        strategyUsed: treat.strategyUsed,
-        policyDecision: treat.policyDecision,
-        isEscalated: treat.isEscalated,
-        isPolicyBlocked: treat.isPolicyBlocked,
-      },
-    };
-  });
+    // Combine Control and Treatment outcomes into side-by-side comparison array
+    const pairedCases = sim.controlOutcomes.map((ctrl: any, idx: number) => {
+      const treat = sim.treatmentOutcomes[idx];
+      return {
+        caseIndex: idx + 1,
+        caseId: ctrl.caseId,
+        amountPaise: ctrl.amountPaise.toString(),
+        control: {
+          finalState: ctrl.finalState,
+          recoveredPaise: ctrl.recoveredPaise.toString(),
+          retryCount: ctrl.retryCount,
+        },
+        treatment: {
+          finalState: treat.finalState,
+          recoveredPaise: treat.recoveredPaise.toString(),
+          netRecoveredPaise: treat.netRecoveredPaise.toString(),
+          aiCategory: treat.aiDiagnosisCategory,
+          strategyUsed: treat.strategyUsed,
+          policyDecision: treat.policyDecision,
+          isEscalated: treat.isEscalated,
+          isPolicyBlocked: treat.isPolicyBlocked,
+        },
+      };
+    });
 
-  res.json(serializeBigInt(pairedCases));
-});
+    res.json(serializeBigInt(pairedCases));
+  },
+);

@@ -9,10 +9,46 @@ export function SimulationLabScreen() {
   const [lastExecutedSeed, setLastExecutedSeed] = useState<number | null>(null);
 
   const multiSeedData = [
-    { seed: 20260822, controlNet: "₹1,96,826", treatNet: "₹2,10,016", incremental: "+₹13,190", lift: "+6.70%", accuracy: "87.6%", escalations: 89, unneeded: "0.0%" },
-    { seed: 20260823, controlNet: "₹2,59,420", treatNet: "₹3,02,104", incremental: "+₹42,684", lift: "+16.45%", accuracy: "84.8%", escalations: 104, unneeded: "0.0%" },
-    { seed: 20260824, controlNet: "₹1,90,535", treatNet: "₹2,61,105", incremental: "+₹70,570", lift: "+37.03%", accuracy: "83.6%", escalations: 92, unneeded: "0.0%" },
-    { seed: 20260825, controlNet: "₹2,28,117", treatNet: "₹2,82,298", incremental: "+₹54,181", lift: "+23.75%", accuracy: "83.6%", escalations: 100, unneeded: "0.0%" },
+    {
+      seed: 20260822,
+      controlNet: "₹1,96,826",
+      treatNet: "₹2,10,016",
+      incremental: "+₹13,190",
+      lift: "+6.70%",
+      accuracy: "87.6%",
+      escalations: 89,
+      unneeded: "0.0%",
+    },
+    {
+      seed: 20260823,
+      controlNet: "₹2,59,420",
+      treatNet: "₹3,02,104",
+      incremental: "+₹42,684",
+      lift: "+16.45%",
+      accuracy: "84.8%",
+      escalations: 104,
+      unneeded: "0.0%",
+    },
+    {
+      seed: 20260824,
+      controlNet: "₹1,90,535",
+      treatNet: "₹2,61,105",
+      incremental: "+₹70,570",
+      lift: "+37.03%",
+      accuracy: "83.6%",
+      escalations: 92,
+      unneeded: "0.0%",
+    },
+    {
+      seed: 20260825,
+      controlNet: "₹2,28,117",
+      treatNet: "₹2,82,298",
+      incremental: "+₹54,181",
+      lift: "+23.75%",
+      accuracy: "83.6%",
+      escalations: 100,
+      unneeded: "0.0%",
+    },
   ];
 
   const fetchSimulationData = async (targetSeed: number = 20260822) => {
@@ -27,7 +63,9 @@ export function SimulationLabScreen() {
       setMetrics(data);
       setLastExecutedSeed(targetSeed);
 
-      const casesRes = await fetch(`/api/v1/simulations/${data.simulationId}/cases`);
+      const casesRes = await fetch(
+        `/api/v1/simulations/${data.simulationId}/cases`,
+      );
       const casesData = await casesRes.json();
       setCases(casesData);
     } catch (err) {
@@ -59,7 +97,8 @@ export function SimulationLabScreen() {
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 text-amber-400 shrink-0" />
           <span>
-            <strong>COUNTERFACTUAL SIMULATION LAB:</strong> Real-time backend generation of 500 cases with seed reproducibility.
+            <strong>COUNTERFACTUAL SIMULATION LAB:</strong> Real-time backend
+            generation of 500 cases with seed reproducibility.
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -78,7 +117,8 @@ export function SimulationLabScreen() {
             500-CASE COUNTERFACTUAL EVALUATION
           </h2>
           <p className="text-sm text-slate-400 mt-1">
-            Evaluating performance across 500 synthetic cases generated with reproducible seeds.
+            Evaluating performance across 500 synthetic cases generated with
+            reproducible seeds.
           </p>
         </div>
 
@@ -117,33 +157,60 @@ export function SimulationLabScreen() {
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono text-xs">
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400">Total Risk (500 Cases)</div>
+            <div className="text-[11px] text-slate-400">
+              Total Risk (500 Cases)
+            </div>
             <div className="text-lg font-bold text-white mt-1">
-              ₹{(Number(metrics.totalRiskPaise || 0) / 100).toLocaleString("en-IN")}
+              ₹
+              {(Number(metrics.totalRiskPaise || 0) / 100).toLocaleString(
+                "en-IN",
+              )}
             </div>
-            <div className="text-[10px] text-slate-500 mt-1">250 Control / 250 Treatment</div>
+            <div className="text-[10px] text-slate-500 mt-1">
+              250 Control / 250 Treatment
+            </div>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400">Control Net Recovered</div>
+            <div className="text-[11px] text-slate-400">
+              Control Net Recovered
+            </div>
             <div className="text-lg font-bold text-slate-300 mt-1">
-              ₹{(Number(metrics.controlNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+              ₹
+              {(
+                Number(metrics.controlNetRecoveredPaise || 0) / 100
+              ).toLocaleString("en-IN")}
             </div>
-            <div className="text-[10px] text-slate-500 mt-1">Rate: {metrics.controlRecoveryRatePercent}%</div>
+            <div className="text-[10px] text-slate-500 mt-1">
+              Rate: {metrics.controlRecoveryRatePercent}%
+            </div>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-            <div className="text-[11px] text-slate-400">RECOVER-AI Net Recovered</div>
-            <div className="text-lg font-bold text-emerald-400 mt-1">
-              ₹{(Number(metrics.treatmentNetRecoveredPaise || 0) / 100).toLocaleString("en-IN")}
+            <div className="text-[11px] text-slate-400">
+              RECOVER-AI Net Recovered
             </div>
-            <div className="text-[10px] text-emerald-500 mt-1">Rate: {metrics.treatmentRecoveryRatePercent}%</div>
+            <div className="text-lg font-bold text-emerald-400 mt-1">
+              ₹
+              {(
+                Number(metrics.treatmentNetRecoveredPaise || 0) / 100
+              ).toLocaleString("en-IN")}
+            </div>
+            <div className="text-[10px] text-emerald-500 mt-1">
+              Rate: {metrics.treatmentRecoveryRatePercent}%
+            </div>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-900/60 border border-indigo-500/30 bg-indigo-950/20">
-            <div className="text-[11px] text-indigo-300">Treatment Lift (Latest Run)</div>
-            <div className="text-lg font-bold text-indigo-400 mt-1">+{metrics.recoveryLiftPercent}%</div>
-            <div className="text-[10px] text-emerald-400 mt-1">Mean Lift Across Seeds: +69.00%</div>
+            <div className="text-[11px] text-indigo-300">
+              Treatment Lift (Latest Run)
+            </div>
+            <div className="text-lg font-bold text-indigo-400 mt-1">
+              +{metrics.recoveryLiftPercent}%
+            </div>
+            <div className="text-[10px] text-emerald-400 mt-1">
+              Mean Lift Across Seeds: +69.00%
+            </div>
           </div>
         </div>
       )}
@@ -151,8 +218,12 @@ export function SimulationLabScreen() {
       {/* Multi-Seed Robustness Verification Table */}
       <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
-          <h3 className="font-bold text-white">Multi-Seed Robustness Evaluation (4 Seeds)</h3>
-          <span className="text-emerald-400 text-xs font-bold bg-emerald-950/30 px-2.5 py-1 rounded-md border border-emerald-500/20">Average Lift: +69.00%</span>
+          <h3 className="font-bold text-white">
+            Multi-Seed Robustness Evaluation (4 Seeds)
+          </h3>
+          <span className="text-emerald-400 text-xs font-bold bg-emerald-950/30 px-2.5 py-1 rounded-md border border-emerald-500/20">
+            Average Lift: +69.00%
+          </span>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/50">
@@ -161,9 +232,13 @@ export function SimulationLabScreen() {
               <tr>
                 <th className="p-3 font-medium">Seed (Click to run)</th>
                 <th className="p-3 font-medium text-right">Control Net (₹)</th>
-                <th className="p-3 font-bold text-emerald-400 text-right">RECOVER-AI Net (₹)</th>
+                <th className="p-3 font-bold text-emerald-400 text-right">
+                  RECOVER-AI Net (₹)
+                </th>
                 <th className="p-3 font-medium text-right">Incremental (₹)</th>
-                <th className="p-3 font-bold text-emerald-400 text-center">Recovery Lift</th>
+                <th className="p-3 font-bold text-emerald-400 text-center">
+                  Recovery Lift
+                </th>
                 <th className="p-3 font-medium text-center">AI Accuracy</th>
                 <th className="p-3 font-medium text-center">Escalations</th>
                 <th className="p-3 font-medium text-center">Unneeded %</th>
@@ -186,16 +261,32 @@ export function SimulationLabScreen() {
                     }`}
                   >
                     <td className="p-3 font-mono text-xs text-indigo-300 flex items-center gap-1.5">
-                      {isActive && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />}
+                      {isActive && (
+                        <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                      )}
                       {row.seed}
                     </td>
-                    <td className="p-3 text-slate-400 font-mono text-xs text-right">{row.controlNet}</td>
-                    <td className="p-3 font-bold text-emerald-400 font-mono text-xs text-right">{row.treatNet}</td>
-                    <td className="p-3 font-bold text-indigo-400 font-mono text-xs text-right">{row.incremental}</td>
-                    <td className="p-3 font-bold text-emerald-400 font-mono text-xs text-center">{row.lift}</td>
-                    <td className="p-3 text-purple-300 font-mono text-xs text-center">{row.accuracy}</td>
-                    <td className="p-3 text-slate-400 font-mono text-xs text-center">{row.escalations}</td>
-                    <td className="p-3 text-slate-400 font-mono text-xs text-center">{row.unneeded}</td>
+                    <td className="p-3 text-slate-400 font-mono text-xs text-right">
+                      {row.controlNet}
+                    </td>
+                    <td className="p-3 font-bold text-emerald-400 font-mono text-xs text-right">
+                      {row.treatNet}
+                    </td>
+                    <td className="p-3 font-bold text-indigo-400 font-mono text-xs text-right">
+                      {row.incremental}
+                    </td>
+                    <td className="p-3 font-bold text-emerald-400 font-mono text-xs text-center">
+                      {row.lift}
+                    </td>
+                    <td className="p-3 text-purple-300 font-mono text-xs text-center">
+                      {row.accuracy}
+                    </td>
+                    <td className="p-3 text-slate-400 font-mono text-xs text-center">
+                      {row.escalations}
+                    </td>
+                    <td className="p-3 text-slate-400 font-mono text-xs text-center">
+                      {row.unneeded}
+                    </td>
                   </tr>
                 );
               })}
@@ -226,9 +317,16 @@ export function SimulationLabScreen() {
             </thead>
             <tbody className="divide-y divide-slate-800 text-slate-300">
               {cases.slice(0, 15).map((c) => (
-                <tr key={c.caseIndex} className="hover:bg-slate-900/50 transition-colors">
-                  <td className="p-3 font-bold text-slate-400">#{c.caseIndex}</td>
-                  <td className="p-3 text-white">₹{(Number(c.amountPaise) / 100).toFixed(0)}</td>
+                <tr
+                  key={c.caseIndex}
+                  className="hover:bg-slate-900/50 transition-colors"
+                >
+                  <td className="p-3 font-bold text-slate-400">
+                    #{c.caseIndex}
+                  </td>
+                  <td className="p-3 text-white">
+                    ₹{(Number(c.amountPaise) / 100).toFixed(0)}
+                  </td>
                   <td className="p-3">
                     <span
                       className={`px-2 py-0.5 rounded text-[11px] ${
@@ -240,18 +338,22 @@ export function SimulationLabScreen() {
                       {c.control.finalState} (Retries: {c.control.retryCount})
                     </span>
                   </td>
-                  <td className="p-3 text-purple-300">{c.treatment.aiCategory}</td>
-                  <td className="p-3 text-indigo-300">{c.treatment.strategyUsed}</td>
+                  <td className="p-3 text-purple-300">
+                    {c.treatment.aiCategory}
+                  </td>
+                  <td className="p-3 text-indigo-300">
+                    {c.treatment.strategyUsed}
+                  </td>
                   <td className="p-3">
                     <span
                       className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${
                         c.treatment.finalState === "PAID"
                           ? "bg-emerald-500/20 text-emerald-400"
                           : c.treatment.finalState === "POLICY_BLOCKED"
-                          ? "bg-rose-500/20 text-rose-400"
-                          : c.treatment.finalState === "P2P_PAUSED"
-                          ? "bg-amber-500/20 text-amber-400"
-                          : "bg-slate-800 text-slate-300"
+                            ? "bg-rose-500/20 text-rose-400"
+                            : c.treatment.finalState === "P2P_PAUSED"
+                              ? "bg-amber-500/20 text-amber-400"
+                              : "bg-slate-800 text-slate-300"
                       }`}
                     >
                       {c.treatment.finalState}

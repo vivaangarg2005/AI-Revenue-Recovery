@@ -14,15 +14,16 @@ export type RecommendedStrategy =
   | "HUMAN_ESCALATION";
 
 export type P2PIntent =
-  | "WILL_PAY"
-  | "REQUEST_DELAY"
-  | "REFUSES_PAYMENT"
-  | "UNKNOWN";
+  "WILL_PAY" | "REQUEST_DELAY" | "REFUSES_PAYMENT" | "UNKNOWN";
 
 export interface DiagnosisInput {
   failureCode: string;
   failureMessage: string;
-  paymentHistory?: Array<{ date: string; status: string; failureCode?: string }>;
+  paymentHistory?: Array<{
+    date: string;
+    status: string;
+    failureCode?: string;
+  }>;
   amountPaise: string | number;
   customerTier: string;
 }

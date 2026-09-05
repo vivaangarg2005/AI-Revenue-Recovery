@@ -13,9 +13,15 @@ async function main() {
   for (const seed of seeds) {
     const { metrics } = await SimulationRunner.runSimulation(seed);
 
-    const ctrlINR = (BigInt(metrics.controlNetRecoveredPaise) / BigInt(100)).toLocaleString("en-IN");
-    const treatINR = (BigInt(metrics.treatmentNetRecoveredPaise) / BigInt(100)).toLocaleString("en-IN");
-    const incINR = (BigInt(metrics.incrementalRecoveredPaise) / BigInt(100)).toLocaleString("en-IN");
+    const ctrlINR = (
+      BigInt(metrics.controlNetRecoveredPaise) / BigInt(100)
+    ).toLocaleString("en-IN");
+    const treatINR = (
+      BigInt(metrics.treatmentNetRecoveredPaise) / BigInt(100)
+    ).toLocaleString("en-IN");
+    const incINR = (
+      BigInt(metrics.incrementalRecoveredPaise) / BigInt(100)
+    ).toLocaleString("en-IN");
 
     totalLiftSum += metrics.recoveryLiftPercent;
 
@@ -35,9 +41,13 @@ async function main() {
 
   const averageLift = (totalLiftSum / seeds.length).toFixed(2);
   console.log(`\n==================================================`);
-  console.log(`AVERAGE TREATMENT RECOVERY LIFT ACROSS 4 SEEDS: +${averageLift}%`);
+  console.log(
+    `AVERAGE TREATMENT RECOVERY LIFT ACROSS 4 SEEDS: +${averageLift}%`,
+  );
   console.log(`==================================================`);
-  console.log(`✓ Multi-seed robustness evaluation completed successfully at ₹0 cost.`);
+  console.log(
+    `✓ Multi-seed robustness evaluation completed successfully at ₹0 cost.`,
+  );
 }
 
 main().catch((err) => {

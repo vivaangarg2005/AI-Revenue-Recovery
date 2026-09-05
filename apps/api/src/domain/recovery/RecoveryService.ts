@@ -40,10 +40,13 @@ export class RecoveryService {
     });
 
     if (claimed.count !== 1) {
-      throw Object.assign(new Error("Case is already being processed or is not runnable"), {
-        statusCode: 409,
-        code: "CASE_NOT_RUNNABLE",
-      });
+      throw Object.assign(
+        new Error("Case is already being processed or is not runnable"),
+        {
+          statusCode: 409,
+          code: "CASE_NOT_RUNNABLE",
+        },
+      );
     }
 
     await prisma.fSMTransition.create({
@@ -76,7 +79,10 @@ export class RecoveryService {
     const initialState = FSMState.FAILED;
 
     // Guard: If already terminal (PAID, TERMINATED_OPT_OUT), return early
-    if (recoveryCase.fsmState === FSMState.PAID || recoveryCase.fsmState === FSMState.TERMINATED_OPT_OUT) {
+    if (
+      recoveryCase.fsmState === FSMState.PAID ||
+      recoveryCase.fsmState === FSMState.TERMINATED_OPT_OUT
+    ) {
       return {
         caseId,
         initialState: recoveryCase.fsmState,
@@ -86,9 +92,15 @@ export class RecoveryService {
       };
     }
 
-    const customer = recoveryCase.subscription?.customer || { tier: "STANDARD", isOptedOut: false };
-    const failureCode = recoveryCase.FailureEvent[0]?.rawProviderCode || "GATEWAY_TIMEOUT";
-    const failureMessage = recoveryCase.FailureEvent[0]?.normalizedCategory || "Payment debit failure";
+    const customer = recoveryCase.subscription?.customer || {
+      tier: "STANDARD",
+      isOptedOut: false,
+    };
+    const failureCode =
+      recoveryCase.FailureEvent[0]?.rawProviderCode || "GATEWAY_TIMEOUT";
+    const failureMessage =
+      recoveryCase.FailureEvent[0]?.normalizedCategory ||
+      "Payment debit failure";
 
     // STEP 2: AI Diagnosis
     const aiProvider = getAIProvider();
@@ -117,16 +129,23 @@ export class RecoveryService {
       caseId,
       "AI_DIAGNOSIS_COMPLETED",
       { diagnosisId: diagnosisRecord.id, category: diagnosisResult.category },
-      correlationId
+      correlationId,
     );
 
     // STEP 3: DIAGNOSING -> DIAGNOSED
-    await this.updateCaseState(caseId, FSMState.DIAGNOSED, "AI_DIAGNOSIS_DONE", correlationId);
+    await this.updateCaseState(
+      caseId,
+      FSMState.DIAGNOSED,
+      "AI_DIAGNOSIS_DONE",
+      correlationId,
+    );
 
     // STEP 4: Action Mapping
-    let proposedActionType = this.mapStrategyToAction(diagnosisResult.recommendedStrategy);
+    let proposedActionType = this.mapStrategyToAction(
+      diagnosisResult.recommendedStrategy,
+    );
 
-    if (diagnosisResult.confidence < 0.70) {
+    if (diagnosisResult.confidence < 0.7) {
       proposedActionType = ActionType.ESCALATE;
     }
 
@@ -135,7 +154,8 @@ export class RecoveryService {
       currentState: FSMState.DIAGNOSED,
       action: proposedActionType,
       retryCount: recoveryCase.retryCount,
-      discountPercent: proposedActionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0,
+      discountPercent:
+        proposedActionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0,
       isOptedOut: customer.isOptedOut,
       aiConfidence: diagnosisResult.confidence,
     });
@@ -144,7 +164,9 @@ export class RecoveryService {
     const policyRecord = await prisma.policyDecision.create({
       data: {
         caseId,
-        decision: policyDecision.allowed ? DecisionType.ALLOW : DecisionType.DENY,
+        decision: policyDecision.allowed
+          ? DecisionType.ALLOW
+          : DecisionType.DENY,
         policyId: policyDecision.policyId,
         violations: policyDecision.violations,
         policySignatureHash: crypto
@@ -158,13 +180,23 @@ export class RecoveryService {
       caseId,
       "POLICY_EVALUATED",
       { decisionId: policyRecord.id, allowed: policyDecision.allowed },
-      correlationId
+      correlationId,
     );
 
     // STEP 6: Handle Policy DENIED
     if (!policyDecision.allowed) {
-      await this.createAuditEvent(caseId, "ACTION_DENIED", { violations: policyDecision.violations }, correlationId);
-      await this.updateCaseState(caseId, FSMState.POLICY_BLOCKED, "POLICY_DENIED", correlationId);
+      await this.createAuditEvent(
+        caseId,
+        "ACTION_DENIED",
+        { violations: policyDecision.violations },
+        correlationId,
+      );
+      await this.updateCaseState(
+        caseId,
+        FSMState.POLICY_BLOCKED,
+        "POLICY_DENIED",
+        correlationId,
+      );
 
       return {
         caseId,
@@ -182,8 +214,18 @@ export class RecoveryService {
     }
 
     // STEP 7: Policy ALLOWED -> Transition to ACTION_AUTHORIZED
-    await this.createAuditEvent(caseId, "ACTION_AUTHORIZED", { action: proposedActionType }, correlationId);
-    await this.updateCaseState(caseId, FSMState.ACTION_AUTHORIZED, "POLICY_ALLOWED", correlationId);
+    await this.createAuditEvent(
+      caseId,
+      "ACTION_AUTHORIZED",
+      { action: proposedActionType },
+      correlationId,
+    );
+    await this.updateCaseState(
+      caseId,
+      FSMState.ACTION_AUTHORIZED,
+      "POLICY_ALLOWED",
+      correlationId,
+    );
 
     const actionIdempotencyKey = `${caseId}_act_${Date.now()}`;
 
@@ -205,8 +247,18 @@ export class RecoveryService {
         where: { id: actionRecord.id },
         data: { executionStatus: "COMPLETED" },
       });
-      await this.createAuditEvent(caseId, "RECOVERY_ESCALATED", { reason: "AI/Policy Escalation" }, correlationId);
-      await this.updateCaseState(caseId, FSMState.ESCALATED, "HUMAN_ESCALATION_REQUIRED", correlationId);
+      await this.createAuditEvent(
+        caseId,
+        "RECOVERY_ESCALATED",
+        { reason: "AI/Policy Escalation" },
+        correlationId,
+      );
+      await this.updateCaseState(
+        caseId,
+        FSMState.ESCALATED,
+        "HUMAN_ESCALATION_REQUIRED",
+        correlationId,
+      );
 
       return {
         caseId,
@@ -225,25 +277,34 @@ export class RecoveryService {
 
     // STEP 8: Execute Payment Action Routing based on ActionType
     const paymentIdempotencyKey = `${caseId}_pay_${recoveryCase.retryCount + 1}`;
-    
-    await this.createAuditEvent(caseId, "PAYMENT_ATTEMPTED", { idempotencyKey: paymentIdempotencyKey }, correlationId);
+
+    await this.createAuditEvent(
+      caseId,
+      "PAYMENT_ATTEMPTED",
+      { idempotencyKey: paymentIdempotencyKey },
+      correlationId,
+    );
 
     let paymentResult;
-    const discountPercent = proposedActionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0;
+    const discountPercent =
+      proposedActionType === ActionType.OFFER_DISCOUNT ? 5.0 : 0;
 
-    if (proposedActionType === ActionType.CREATE_PAYMENT_LINK || proposedActionType === ActionType.OFFER_DISCOUNT) {
+    if (
+      proposedActionType === ActionType.CREATE_PAYMENT_LINK ||
+      proposedActionType === ActionType.OFFER_DISCOUNT
+    ) {
       paymentResult = await this.paymentProvider.createPaymentLink(
         caseId,
         recoveryCase.amountDuePaise,
         discountPercent,
-        paymentIdempotencyKey
+        paymentIdempotencyKey,
       );
     } else {
       paymentResult = await this.paymentProvider.retryPayment(
         caseId,
         recoveryCase.amountDuePaise,
         paymentIdempotencyKey,
-        diagnosisResult.category
+        diagnosisResult.category,
       );
     }
 
@@ -267,8 +328,18 @@ export class RecoveryService {
 
     if (paymentResult.success) {
       // Transition ACTION_AUTHORIZED -> AWAITING_PAYMENT -> PAID
-      await this.updateCaseState(caseId, FSMState.AWAITING_PAYMENT, "PAYMENT_EXECUTED", correlationId);
-      await this.updateCaseState(caseId, FSMState.PAID, "PAYMENT_CONFIRMED", correlationId);
+      await this.updateCaseState(
+        caseId,
+        FSMState.AWAITING_PAYMENT,
+        "PAYMENT_EXECUTED",
+        correlationId,
+      );
+      await this.updateCaseState(
+        caseId,
+        FSMState.PAID,
+        "PAYMENT_CONFIRMED",
+        correlationId,
+      );
 
       // Update Case Recovered Amount and Invoice
       await prisma.$transaction([
@@ -294,7 +365,7 @@ export class RecoveryService {
         caseId,
         "PAYMENT_SUCCEEDED",
         { amountRecovered: paymentResult.amountRecoveredPaise.toString() },
-        correlationId
+        correlationId,
       );
 
       return {
@@ -320,8 +391,18 @@ export class RecoveryService {
         data: { executionStatus: "FAILED" },
       });
 
-      await this.updateCaseState(caseId, FSMState.HALTED, "PAYMENT_FAILED", correlationId);
-      await this.createAuditEvent(caseId, "PAYMENT_FAILED", { reason: paymentResult.failureReason }, correlationId);
+      await this.updateCaseState(
+        caseId,
+        FSMState.HALTED,
+        "PAYMENT_FAILED",
+        correlationId,
+      );
+      await this.createAuditEvent(
+        caseId,
+        "PAYMENT_FAILED",
+        { reason: paymentResult.failureReason },
+        correlationId,
+      );
 
       return {
         caseId,
@@ -349,9 +430,11 @@ export class RecoveryService {
     caseId: string,
     toState: FSMState,
     trigger: string,
-    correlationId: string
+    correlationId: string,
   ) {
-    const currentCase = await prisma.recoveryCase.findUnique({ where: { id: caseId } });
+    const currentCase = await prisma.recoveryCase.findUnique({
+      where: { id: caseId },
+    });
     if (!currentCase) return;
 
     const fromState = currentCase.fsmState;
@@ -385,7 +468,7 @@ export class RecoveryService {
     caseId: string,
     eventType: string,
     payload: Record<string, any>,
-    correlationId: string
+    correlationId: string,
   ) {
     await prisma.auditEvent.create({
       data: {

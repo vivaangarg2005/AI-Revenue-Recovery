@@ -25,8 +25,8 @@ healthRouter.get("/health", async (req: Request, res: Response) => {
     dbStatus === "ok" && redisStatus === "ok"
       ? "ok"
       : dbStatus === "down" && redisStatus === "down"
-      ? "down"
-      : "degraded";
+        ? "down"
+        : "degraded";
 
   const responsePayload = {
     status: overallStatus,
@@ -41,8 +41,10 @@ healthRouter.get("/health", async (req: Request, res: Response) => {
   };
 
   const validatedResponse = HealthCheckResponseSchema.parse(responsePayload);
-  const isMock = process.env.AI_MODE === "mock" || process.env.PAYMENT_PROVIDER_MODE === "mock";
-  const statusCode = (overallStatus === "down" && !isMock) ? 503 : 200;
+  const isMock =
+    process.env.AI_MODE === "mock" ||
+    process.env.PAYMENT_PROVIDER_MODE === "mock";
+  const statusCode = overallStatus === "down" && !isMock ? 503 : 200;
   const aiProviderName = process.env.AI_MODE === "gemini" ? "Gemini" : "Mock";
 
   res.status(statusCode).json({

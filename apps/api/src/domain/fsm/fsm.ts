@@ -1,7 +1,10 @@
 import { FSMState, TransitionResult } from "./fsm.types.js";
 
 export class InvalidTransitionError extends Error {
-  constructor(public fromState: FSMState, public toState: FSMState) {
+  constructor(
+    public fromState: FSMState,
+    public toState: FSMState,
+  ) {
     super(`Invalid FSM transition from ${fromState} to ${toState}`);
     this.name = "InvalidTransitionError";
   }
@@ -12,7 +15,12 @@ export class InvalidTransitionError extends Error {
  * Pure, deterministic logic. Zero external dependencies.
  */
 const ALLOWED_TRANSITIONS: Record<FSMState, FSMState[]> = {
-  [FSMState.FAILED]: [FSMState.DIAGNOSING, FSMState.HALTED, FSMState.P2P_PAUSED, FSMState.ESCALATED],
+  [FSMState.FAILED]: [
+    FSMState.DIAGNOSING,
+    FSMState.HALTED,
+    FSMState.P2P_PAUSED,
+    FSMState.ESCALATED,
+  ],
   [FSMState.DIAGNOSING]: [
     FSMState.DIAGNOSED,
     FSMState.ESCALATED,
@@ -52,7 +60,11 @@ const ALLOWED_TRANSITIONS: Record<FSMState, FSMState[]> = {
     FSMState.HALTED,
     FSMState.TERMINATED_OPT_OUT,
   ],
-  [FSMState.POLICY_BLOCKED]: [FSMState.DIAGNOSING, FSMState.ESCALATED, FSMState.HALTED],
+  [FSMState.POLICY_BLOCKED]: [
+    FSMState.DIAGNOSING,
+    FSMState.ESCALATED,
+    FSMState.HALTED,
+  ],
   [FSMState.TERMINATED_OPT_OUT]: [], // Terminal state
 };
 

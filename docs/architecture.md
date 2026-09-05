@@ -40,17 +40,17 @@ AI REASONING != POLICY AUTHORIZATION != PAYMENT EXECUTION
 
 ## 3. Finite State Machine (FSM) Matrix
 
-| From State | Trigger Event | Target State | Condition |
-| :--- | :--- | :--- | :--- |
-| `FAILED` | `DIAGNOSE` | `DIAGNOSING` | Initial payment failure ingestion |
-| `DIAGNOSING` | `DIAGNOSIS_COMPLETE` | `DIAGNOSED` | AI diagnosis validated by Zod |
-| `DIAGNOSED` | `EVALUATE_POLICY` | `ACTION_AUTHORIZED` | Policy Gatekeeper authorizes action |
-| `DIAGNOSED` | `POLICY_DENIED` | `POLICY_BLOCKED` | Policy Gatekeeper denies action |
-| `ACTION_AUTHORIZED` | `EXECUTE_PAYMENT` | `PAID` | Payment retry succeeds |
-| `ACTION_AUTHORIZED` | `EXECUTE_LINK` | `AWAITING_PAYMENT` | Payment link sent to customer |
-| `AWAITING_PAYMENT` | `RECEIVE_P2P` | `P2P_PAUSED` | Customer commits to pay on future date |
-| `ACTION_AUTHORIZED` | `ESCALATE` | `ESCALATED` | Human review required |
-| `ACTION_AUTHORIZED` | `HALT` | `HALTED` | Retry limit or opt-out reached |
+| From State          | Trigger Event        | Target State        | Condition                              |
+| :------------------ | :------------------- | :------------------ | :------------------------------------- |
+| `FAILED`            | `DIAGNOSE`           | `DIAGNOSING`        | Initial payment failure ingestion      |
+| `DIAGNOSING`        | `DIAGNOSIS_COMPLETE` | `DIAGNOSED`         | AI diagnosis validated by Zod          |
+| `DIAGNOSED`         | `EVALUATE_POLICY`    | `ACTION_AUTHORIZED` | Policy Gatekeeper authorizes action    |
+| `DIAGNOSED`         | `POLICY_DENIED`      | `POLICY_BLOCKED`    | Policy Gatekeeper denies action        |
+| `ACTION_AUTHORIZED` | `EXECUTE_PAYMENT`    | `PAID`              | Payment retry succeeds                 |
+| `ACTION_AUTHORIZED` | `EXECUTE_LINK`       | `AWAITING_PAYMENT`  | Payment link sent to customer          |
+| `AWAITING_PAYMENT`  | `RECEIVE_P2P`        | `P2P_PAUSED`        | Customer commits to pay on future date |
+| `ACTION_AUTHORIZED` | `ESCALATE`           | `ESCALATED`         | Human review required                  |
+| `ACTION_AUTHORIZED` | `HALT`               | `HALTED`            | Retry limit or opt-out reached         |
 
 ---
 

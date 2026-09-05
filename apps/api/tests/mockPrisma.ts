@@ -93,7 +93,10 @@ class InMemoryPrisma {
       const c = this.recoveryCases.get(caseId);
       if (!c) return null;
 
-      const subObj = this.subscriptions.get(c.subscriptionId) || { id: c.subscriptionId, customerId: "cust_1" };
+      const subObj = this.subscriptions.get(c.subscriptionId) || {
+        id: c.subscriptionId,
+        customerId: "cust_1",
+      };
       const customer = this.customers.get(subObj.customerId) ||
         Array.from(this.customers.values())[0] || {
           id: "cust_1",
@@ -108,13 +111,27 @@ class InMemoryPrisma {
       };
       const invoice = this.invoices.get(c.invoiceId) || { id: c.invoiceId };
 
-      const FailureEvent = Array.from(this.failureEvents.values()).filter((f) => f.caseId === caseId);
-      const AIDiagnosis = Array.from(this.aiDiagnoses.values()).filter((d) => d.caseId === caseId);
-      const PolicyDecision = Array.from(this.policyDecisions.values()).filter((p) => p.caseId === caseId);
-      const RecoveryAction = Array.from(this.recoveryActions.values()).filter((a) => a.caseId === caseId);
-      const PaymentAttempt = Array.from(this.paymentAttempts.values()).filter((pa) => pa.invoiceId === c.invoiceId);
-      const P2PCommitment = Array.from(this.p2pCommitments.values()).filter((p2p) => p2p.caseId === caseId);
-      const FSMTransition = this.fsmTransitions.filter((t) => t.caseId === caseId);
+      const FailureEvent = Array.from(this.failureEvents.values()).filter(
+        (f) => f.caseId === caseId,
+      );
+      const AIDiagnosis = Array.from(this.aiDiagnoses.values()).filter(
+        (d) => d.caseId === caseId,
+      );
+      const PolicyDecision = Array.from(this.policyDecisions.values()).filter(
+        (p) => p.caseId === caseId,
+      );
+      const RecoveryAction = Array.from(this.recoveryActions.values()).filter(
+        (a) => a.caseId === caseId,
+      );
+      const PaymentAttempt = Array.from(this.paymentAttempts.values()).filter(
+        (pa) => pa.invoiceId === c.invoiceId,
+      );
+      const P2PCommitment = Array.from(this.p2pCommitments.values()).filter(
+        (p2p) => p2p.caseId === caseId,
+      );
+      const FSMTransition = this.fsmTransitions.filter(
+        (t) => t.caseId === caseId,
+      );
       const AuditEvent = this.auditEvents.filter((e) => e.caseId === caseId);
 
       return {
@@ -145,7 +162,7 @@ class InMemoryPrisma {
       for (const [id, c] of this.recoveryCases.entries()) {
         if (args.where.id && c.id !== args.where.id) continue;
         if (args.where.fsmState && c.fsmState !== args.where.fsmState) continue;
-        
+
         const updated = { ...c, ...args.data, updatedAt: new Date() };
         this.recoveryCases.set(id, updated);
         count++;
@@ -184,7 +201,12 @@ class InMemoryPrisma {
   recoveryAction = {
     create: async (args: any) => {
       const id = `act_${Date.now()}_${Math.random()}`;
-      const item = { id, createdAt: new Date(), updatedAt: new Date(), ...args.data };
+      const item = {
+        id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...args.data,
+      };
       this.recoveryActions.set(id, item);
       return item;
     },
@@ -240,7 +262,7 @@ class InMemoryPrisma {
     if (Array.isArray(args)) {
       const results = [];
       for (const op of args) {
-         results.push(await op);
+        results.push(await op);
       }
       return results;
     }

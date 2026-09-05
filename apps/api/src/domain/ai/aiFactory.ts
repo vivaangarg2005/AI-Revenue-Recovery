@@ -19,10 +19,14 @@ export function getAIProvider(): AIProvider {
     try {
       cachedProvider = new GeminiAIProvider(geminiKey);
       currentProviderName = "Gemini";
-      console.log(`[AIFactory] Initialized GeminiAIProvider with model: ${process.env.GEMINI_MODEL || "gemini-2.5-flash"}`);
+      console.log(
+        `[AIFactory] Initialized GeminiAIProvider with model: ${process.env.GEMINI_MODEL || "gemini-2.5-flash"}`,
+      );
       return cachedProvider;
     } catch (err: any) {
-      console.warn(`[AIFactory] Failed to initialize GeminiAIProvider (${err.message}). Falling back to MockAIProvider.`);
+      console.warn(
+        `[AIFactory] Failed to initialize GeminiAIProvider (${err.message}). Falling back to MockAIProvider.`,
+      );
     }
   }
 

@@ -11,7 +11,8 @@ export function PlaygroundScreen() {
           Interactive Demo Playgrounds
         </h2>
         <p className="text-sm text-slate-400 mt-1">
-          Test the LLM reasoning engine and the deterministic policy boundary in isolation.
+          Test the LLM reasoning engine and the deterministic policy boundary in
+          isolation.
         </p>
       </div>
 

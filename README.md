@@ -1,6 +1,6 @@
 # RECOVER-AI
 
-> **Track 03 — AI Revenue Recovery**  
+> **Track 03 - AI Revenue Recovery**  
 > **Razorpay AI Buildathon 2026**
 
 **RECOVER-AI is an autonomous, policy-bounded AI subscription revenue recovery engine designed to recover failed recurring subscription payments.**
@@ -9,9 +9,9 @@ Instead of treating every failed payment as the same retry problem, RECOVER-AI a
 
 > [!IMPORTANT]
 >
-> ### Evaluation Disclaimer
+> ## Evaluation Disclaimer
 >
-> **All performance metrics reported in this README come from synthetic, reproducible simulations — not production payment data.**
+> **All performance metrics reported in this README come from synthetic, reproducible simulations - not production payment data.**
 >
 > Across four deterministic 500-case paired experiments, RECOVER-AI achieved a **mean recovery lift of +20.98%** over the static retry baseline.
 >
@@ -321,9 +321,9 @@ This prevents the simulator from directly giving the treatment strategy the answ
 
 The frontend provides an Experiment Lab with:
 
-- **500-Case Evaluation** — runs and displays the synthetic benchmark.
-- **Multi-Seed Robustness** — compares results across multiple deterministic seeds.
-- **Counterfactual Paired Cases** — inspects the same underlying scenario under Control (Static Retry) versus Treatment (RECOVER-AI).
+- **500-Case Evaluation** - runs and displays the synthetic benchmark.
+- **Multi-Seed Robustness** - compares results across multiple deterministic seeds.
+- **Counterfactual Paired Cases** - inspects the same underlying scenario under Control (Static Retry) versus Treatment (RECOVER-AI).
 
 ## 17. Dashboard
 
@@ -464,7 +464,7 @@ npm run simulation:run
 npm run build
 ```
 
-**Status: PASS** — 0 TypeScript errors and 0 Vite build errors.
+**Status: PASS** - 0 TypeScript errors and 0 Vite build errors.
 
 ### Tests
 
@@ -472,7 +472,7 @@ npm run build
 npx vitest run
 ```
 
-**Status: PASS**
+Status: **PASS**
 
 ```text
 9 / 9 test files passed
@@ -573,7 +573,7 @@ into one recovery workflow.
 
 ## 27. Buildathon Alignment
 
-Built for **Razorpay AI Buildathon 2026 — Track 03: AI Revenue Recovery**.
+Built for **Razorpay AI Buildathon 2026 - Track 03: AI Revenue Recovery**.
 
 The project directly targets the track objective of detecting revenue at risk, determining the right intervention, and executing a bounded recovery workflow.
 
@@ -609,7 +609,7 @@ Audit records.
 
 ---
 
-Built for the **Razorpay AI Buildathon 2026 — Track 03: AI Revenue Recovery**.
+Built for the **Razorpay AI Buildathon 2026 - Track 03: AI Revenue Recovery**.
 
 All monetary values in the application are represented using integer Paise where applicable.
 

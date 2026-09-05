@@ -11,7 +11,7 @@ export class MockPaymentProvider implements PaymentProvider {
     caseId: string,
     amountPaise: bigint,
     idempotencyKey: string,
-    failureCategory: string = "TEMPORARY_FAILURE"
+    failureCategory: string = "TEMPORARY_FAILURE",
   ): Promise<PaymentResult> {
     // 1. Idempotency Check: return cached result if key was already processed
     if (this.executedIdempotencyKeys.has(idempotencyKey)) {
@@ -20,7 +20,10 @@ export class MockPaymentProvider implements PaymentProvider {
 
     let result: PaymentResult;
 
-    if (failureCategory === "TEMPORARY_FAILURE" || failureCategory === "GATEWAY_TIMEOUT") {
+    if (
+      failureCategory === "TEMPORARY_FAILURE" ||
+      failureCategory === "GATEWAY_TIMEOUT"
+    ) {
       result = {
         success: true,
         paymentId: `pay_sim_${crypto.randomBytes(6).toString("hex")}`,
@@ -33,10 +36,14 @@ export class MockPaymentProvider implements PaymentProvider {
         success: false,
         paymentId: null,
         amountRecoveredPaise: BigInt(0),
-        failureReason: "Insufficient funds in customer account during debit retry",
+        failureReason:
+          "Insufficient funds in customer account during debit retry",
         isSimulated: true,
       };
-    } else if (failureCategory === "PERMANENT_FAILURE" || failureCategory === "ACCOUNT_CLOSED") {
+    } else if (
+      failureCategory === "PERMANENT_FAILURE" ||
+      failureCategory === "ACCOUNT_CLOSED"
+    ) {
       result = {
         success: false,
         paymentId: null,
@@ -66,14 +73,15 @@ export class MockPaymentProvider implements PaymentProvider {
     caseId: string,
     amountPaise: bigint,
     discountPercent: number,
-    idempotencyKey: string
+    idempotencyKey: string,
   ): Promise<PaymentResult> {
     if (this.executedIdempotencyKeys.has(idempotencyKey)) {
       return this.executedIdempotencyKeys.get(idempotencyKey)!;
     }
 
     // Calculate discounted amount using BigInt integer arithmetic
-    const discountPaise = (amountPaise * BigInt(Math.round(discountPercent * 100))) / BigInt(10000);
+    const discountPaise =
+      (amountPaise * BigInt(Math.round(discountPercent * 100))) / BigInt(10000);
     const finalAmountPaise = amountPaise - discountPaise;
 
     const result: PaymentResult = {

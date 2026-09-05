@@ -58,28 +58,28 @@ export interface ExperimentSummaryMetrics {
   totalCases: number;
   controlCount: number;
   treatmentCount: number;
-  
+
   totalRiskPaise: string;
-  
+
   controlGrossRecoveredPaise: string;
   treatmentGrossRecoveredPaise: string;
-  
+
   controlNetRecoveredPaise: string;
   treatmentNetRecoveredPaise: string;
 
   controlRecoveryRatePercent: number;
   treatmentRecoveryRatePercent: number;
-  
+
   incrementalRecoveredPaise: string;
   netRoiIncreasePaise: string;
   absoluteLiftPercent: number;
   recoveryLiftPercent: number;
-  
+
   discountCostPaise: string;
-  
+
   aiDiagnosisAccuracyPercent: number;
   p2pExtractionAccuracyPercent: number;
-  
+
   escalationCount: number;
   policyBlockCount: number;
   unnecessaryInterventionRatePercent: number;

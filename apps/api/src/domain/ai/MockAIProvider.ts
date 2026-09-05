@@ -1,17 +1,32 @@
-import { AIProvider, DiagnosisInput, DiagnosisOutput, P2PExtractionInput, P2PExtractionOutput } from "./ai.types.js";
-import { DiagnosisOutputSchema, P2PExtractionOutputSchema } from "./ai.schemas.js";
+import {
+  AIProvider,
+  DiagnosisInput,
+  DiagnosisOutput,
+  P2PExtractionInput,
+  P2PExtractionOutput,
+} from "./ai.types.js";
+import {
+  DiagnosisOutputSchema,
+  P2PExtractionOutputSchema,
+} from "./ai.schemas.js";
 
 export class MockAIProvider implements AIProvider {
   /**
    * Deterministic payment failure diagnosis fixture matching.
    */
-  public async diagnosePaymentFailure(input: DiagnosisInput): Promise<DiagnosisOutput> {
+  public async diagnosePaymentFailure(
+    input: DiagnosisInput,
+  ): Promise<DiagnosisOutput> {
     const code = (input.failureCode || "").toUpperCase();
     const msg = (input.failureMessage || "").toLowerCase();
 
     let rawOutput: DiagnosisOutput;
 
-    if (code.includes("GATEWAY_TIMEOUT") || msg.includes("timeout") || msg.includes("network error")) {
+    if (
+      code.includes("GATEWAY_TIMEOUT") ||
+      msg.includes("timeout") ||
+      msg.includes("network error")
+    ) {
       rawOutput = {
         rootCause: "Temporary payment gateway network timeout",
         category: "TEMPORARY_FAILURE",
@@ -19,7 +34,11 @@ export class MockAIProvider implements AIProvider {
         recommendedStrategy: "SCHEDULED_RETRY",
         recommendedDelayDays: 1,
       };
-    } else if (code.includes("INSUFFICIENT_FUNDS") || msg.includes("balance") || msg.includes("funds")) {
+    } else if (
+      code.includes("INSUFFICIENT_FUNDS") ||
+      msg.includes("balance") ||
+      msg.includes("funds")
+    ) {
       rawOutput = {
         rootCause: "Insufficient account balance at time of debit",
         category: "INSUFFICIENT_FUNDS",
@@ -27,7 +46,11 @@ export class MockAIProvider implements AIProvider {
         recommendedStrategy: "SCHEDULED_RETRY",
         recommendedDelayDays: 3,
       };
-    } else if (code.includes("EXPIRED_CARD") || code.includes("MANDATE_EXPIRED") || msg.includes("expired")) {
+    } else if (
+      code.includes("EXPIRED_CARD") ||
+      code.includes("MANDATE_EXPIRED") ||
+      msg.includes("expired")
+    ) {
       rawOutput = {
         rootCause: "Payment method or mandate card expired",
         category: "EXPIRED_PAYMENT_METHOD",
@@ -35,7 +58,11 @@ export class MockAIProvider implements AIProvider {
         recommendedStrategy: "MANDATE_UPDATE",
         recommendedDelayDays: 0,
       };
-    } else if (code.includes("ACCOUNT_CLOSED") || msg.includes("closed") || msg.includes("stolen")) {
+    } else if (
+      code.includes("ACCOUNT_CLOSED") ||
+      msg.includes("closed") ||
+      msg.includes("stolen")
+    ) {
       rawOutput = {
         rootCause: "Customer bank account closed or flagged stolen",
         category: "PERMANENT_FAILURE",
@@ -47,7 +74,7 @@ export class MockAIProvider implements AIProvider {
       rawOutput = {
         rootCause: "Maybe it will work",
         category: "TEMPORARY_FAILURE",
-        confidence: 0.50,
+        confidence: 0.5,
         recommendedStrategy: "SCHEDULED_RETRY",
         recommendedDelayDays: 1,
       };
@@ -55,7 +82,7 @@ export class MockAIProvider implements AIProvider {
       rawOutput = {
         rootCause: `Unrecognized payment failure code: ${input.failureCode}`,
         category: "UNKNOWN",
-        confidence: 0.50,
+        confidence: 0.5,
         recommendedStrategy: "HUMAN_ESCALATION",
         recommendedDelayDays: 0,
       };
@@ -68,7 +95,9 @@ export class MockAIProvider implements AIProvider {
   /**
    * Deterministic Promise-to-Pay extraction with prompt injection defense.
    */
-  public async extractPromiseToPay(input: P2PExtractionInput): Promise<P2PExtractionOutput> {
+  public async extractPromiseToPay(
+    input: P2PExtractionInput,
+  ): Promise<P2PExtractionOutput> {
     const text = (input.message || "").toLowerCase();
 
     // 1. Detect Prompt Injection Attempts
@@ -86,18 +115,29 @@ export class MockAIProvider implements AIProvider {
       // Neutralize prompt injection attempts completely
       rawOutput = {
         intent: "UNKNOWN",
-        confidence: 0.10,
-        reasoning: "Detected potential prompt injection or policy override attempt.",
+        confidence: 0.1,
+        reasoning:
+          "Detected potential prompt injection or policy override attempt.",
         promisedDate: null,
       };
-    } else if (text.includes("refuse") || text.includes("don't want to pay") || text.includes("cancel subscription")) {
+    } else if (
+      text.includes("refuse") ||
+      text.includes("don't want to pay") ||
+      text.includes("cancel subscription")
+    ) {
       rawOutput = {
         intent: "REFUSES_PAYMENT",
         confidence: 0.95,
-        reasoning: "Customer explicitly refuses to pay or requests cancellation.",
+        reasoning:
+          "Customer explicitly refuses to pay or requests cancellation.",
         promisedDate: null,
       };
-    } else if (text.includes("friday") || text.includes("after salary") || text.includes("i will pay") || text.includes("ill pay")) {
+    } else if (
+      text.includes("friday") ||
+      text.includes("after salary") ||
+      text.includes("i will pay") ||
+      text.includes("ill pay")
+    ) {
       const pastBroken = input.historicalContext?.pastBrokenPromises || 0;
       if (pastBroken >= 2) {
         // AI detects habitual defaulting and distrusts the promise
@@ -110,30 +150,43 @@ export class MockAIProvider implements AIProvider {
       } else {
         rawOutput = {
           intent: "WILL_PAY",
-          confidence: 0.90,
-          reasoning: "Customer provided a clear commitment to pay on a specific date.",
+          confidence: 0.9,
+          reasoning:
+            "Customer provided a clear commitment to pay on a specific date.",
           promisedDate: "2026-08-28", // Deterministic mock target date
         };
       }
-    } else if (text.includes("give me until") || text.includes("delay") || text.includes("next week") || text.includes("monday")) {
+    } else if (
+      text.includes("give me until") ||
+      text.includes("delay") ||
+      text.includes("next week") ||
+      text.includes("monday")
+    ) {
       const pastBroken = input.historicalContext?.pastBrokenPromises || 0;
       rawOutput = {
         intent: "REQUEST_DELAY",
         confidence: pastBroken >= 2 ? 0.45 : 0.88, // Lower confidence if they have broken promises
-        reasoning: pastBroken >= 2 ? `Delay requested, but customer has ${pastBroken} past broken promises.` : "Customer is requesting an extension or delay.",
+        reasoning:
+          pastBroken >= 2
+            ? `Delay requested, but customer has ${pastBroken} past broken promises.`
+            : "Customer is requesting an extension or delay.",
         promisedDate: "2026-08-31", // Deterministic mock target date
       };
-    } else if (text.includes("maybe") || text.includes("not sure") || text.includes("check later")) {
+    } else if (
+      text.includes("maybe") ||
+      text.includes("not sure") ||
+      text.includes("check later")
+    ) {
       rawOutput = {
         intent: "UNKNOWN",
-        confidence: 0.40,
+        confidence: 0.4,
         reasoning: "Customer response is non-committal or uncertain.",
         promisedDate: null,
       };
     } else {
       rawOutput = {
         intent: "UNKNOWN",
-        confidence: 0.20,
+        confidence: 0.2,
         reasoning: "Unable to determine clear payment intent from message.",
         promisedDate: null,
       };

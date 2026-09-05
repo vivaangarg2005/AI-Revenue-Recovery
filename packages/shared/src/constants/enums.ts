@@ -9,21 +9,21 @@ export enum FSMStateEnum {
   HALTED = "HALTED",
   ESCALATED = "ESCALATED",
   POLICY_BLOCKED = "POLICY_BLOCKED",
-  TERMINATED_OPT_OUT = "TERMINATED_OPT_OUT"
+  TERMINATED_OPT_OUT = "TERMINATED_OPT_OUT",
 }
 
 export enum CustomerTierEnum {
   STANDARD = "STANDARD",
-  ENTERPRISE = "ENTERPRISE"
+  ENTERPRISE = "ENTERPRISE",
 }
 
 export enum SubscriptionStatusEnum {
   ACTIVE = "ACTIVE",
   HALTED = "HALTED",
-  CANCELLED = "CANCELLED"
+  CANCELLED = "CANCELLED",
 }
 
 export enum DecisionTypeEnum {
   ALLOW = "ALLOW",
-  DENY = "DENY"
+  DENY = "DENY",
 }

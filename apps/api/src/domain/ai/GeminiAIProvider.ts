@@ -1,6 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
-import { AIProvider, DiagnosisInput, DiagnosisOutput, P2PExtractionInput, P2PExtractionOutput } from "./ai.types.js";
-import { DiagnosisOutputSchema, P2PExtractionOutputSchema } from "./ai.schemas.js";
+import {
+  AIProvider,
+  DiagnosisInput,
+  DiagnosisOutput,
+  P2PExtractionInput,
+  P2PExtractionOutput,
+} from "./ai.types.js";
+import {
+  DiagnosisOutputSchema,
+  P2PExtractionOutputSchema,
+} from "./ai.schemas.js";
 import { MockAIProvider } from "./MockAIProvider.js";
 
 export class GeminiAIProvider implements AIProvider {
@@ -11,17 +20,22 @@ export class GeminiAIProvider implements AIProvider {
   constructor(apiKey?: string, modelName?: string) {
     const key = apiKey || process.env.GEMINI_API_KEY || "";
     if (!key) {
-      throw new Error("GEMINI_API_KEY is missing. GeminiAIProvider requires a valid API key.");
+      throw new Error(
+        "GEMINI_API_KEY is missing. GeminiAIProvider requires a valid API key.",
+      );
     }
     this.ai = new GoogleGenAI({ apiKey: key });
-    this.modelName = modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    this.modelName =
+      modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
     this.fallbackMock = new MockAIProvider();
   }
 
   /**
    * Diagnoses payment failure using Gemini structured generation with safe fallback.
    */
-  public async diagnosePaymentFailure(input: DiagnosisInput): Promise<DiagnosisOutput> {
+  public async diagnosePaymentFailure(
+    input: DiagnosisInput,
+  ): Promise<DiagnosisOutput> {
     const prompt = `
 You are RECOVER-AI Payment Failure Diagnosis Engine.
 Analyze the observed payment failure parameters and determine the failure category and recommended recovery strategy.
@@ -65,9 +79,13 @@ Return ONLY a JSON object matching this exact schema:
       const parsedRaw = JSON.parse(text);
       return DiagnosisOutputSchema.parse(parsedRaw);
     } catch (err: any) {
-      console.warn(`[GeminiAIProvider] Gemini API error (${err.message}). Falling back to MockAIProvider.`);
+      console.warn(
+        `[GeminiAIProvider] Gemini API error (${err.message}). Falling back to MockAIProvider.`,
+      );
       if (process.env.NODE_ENV === "production") {
-        throw new Error("AI extraction is unavailable; do not automate this action");
+        throw new Error(
+          "AI extraction is unavailable; do not automate this action",
+        );
       }
       return this.fallbackMock.diagnosePaymentFailure(input);
     }
@@ -76,11 +94,19 @@ Return ONLY a JSON object matching this exact schema:
   /**
    * Extracts Promise-to-Pay intent from untrusted customer text using Gemini with safe fallback.
    */
-  public async extractPromiseToPay(input: P2PExtractionInput): Promise<P2PExtractionOutput> {
-    const injectionPattern = /\b(ignore|system prompt|previous instructions|bypass|override)\b/i;
+  public async extractPromiseToPay(
+    input: P2PExtractionInput,
+  ): Promise<P2PExtractionOutput> {
+    const injectionPattern =
+      /\b(ignore|system prompt|previous instructions|bypass|override)\b/i;
 
     if (injectionPattern.test(input.message)) {
-      return { intent: "UNKNOWN", confidence: 0.1, reasoning: "Detected potential prompt injection.", promisedDate: null };
+      return {
+        intent: "UNKNOWN",
+        confidence: 0.1,
+        reasoning: "Detected potential prompt injection.",
+        promisedDate: null,
+      };
     }
 
     const customerMessage = JSON.stringify(input.message);
@@ -135,9 +161,13 @@ Return ONLY a JSON object matching this exact schema:
       const parsedRaw = JSON.parse(text);
       return P2PExtractionOutputSchema.parse(parsedRaw);
     } catch (err: any) {
-      console.warn(`[GeminiAIProvider] Gemini P2P API error (${err.message}). Falling back to MockAIProvider.`);
+      console.warn(
+        `[GeminiAIProvider] Gemini P2P API error (${err.message}). Falling back to MockAIProvider.`,
+      );
       if (process.env.NODE_ENV === "production") {
-        throw new Error("AI extraction is unavailable; do not automate this action");
+        throw new Error(
+          "AI extraction is unavailable; do not automate this action",
+        );
       }
       return this.fallbackMock.extractPromiseToPay(input);
     }

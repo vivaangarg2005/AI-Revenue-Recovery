@@ -12,7 +12,10 @@ const EvaluatePolicySchema = z.object({
   retryCount: z.number().int().min(0),
   discountPercent: z.number().optional().default(0),
   isOptedOut: z.boolean().optional().default(false),
-  customerTier: z.enum(["STANDARD", "ENTERPRISE"]).optional().default("STANDARD"),
+  customerTier: z
+    .enum(["STANDARD", "ENTERPRISE"])
+    .optional()
+    .default("STANDARD"),
   aiConfidence: z.number().min(0).max(1).optional().default(0.95),
 });
 

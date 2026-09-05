@@ -87,36 +87,54 @@ export class MockAIProvider implements AIProvider {
       rawOutput = {
         intent: "UNKNOWN",
         confidence: 0.10,
+        reasoning: "Detected potential prompt injection or policy override attempt.",
         promisedDate: null,
       };
     } else if (text.includes("refuse") || text.includes("don't want to pay") || text.includes("cancel subscription")) {
       rawOutput = {
         intent: "REFUSES_PAYMENT",
         confidence: 0.95,
+        reasoning: "Customer explicitly refuses to pay or requests cancellation.",
         promisedDate: null,
       };
     } else if (text.includes("friday") || text.includes("after salary") || text.includes("i will pay") || text.includes("ill pay")) {
-      rawOutput = {
-        intent: "WILL_PAY",
-        confidence: 0.90,
-        promisedDate: "2026-08-28", // Deterministic mock target date
-      };
+      const pastBroken = input.historicalContext?.pastBrokenPromises || 0;
+      if (pastBroken >= 2) {
+        // AI detects habitual defaulting and distrusts the promise
+        rawOutput = {
+          intent: "UNKNOWN",
+          confidence: 0.35,
+          reasoning: `Customer history shows ${pastBroken} broken promises; high risk of default.`,
+          promisedDate: null,
+        };
+      } else {
+        rawOutput = {
+          intent: "WILL_PAY",
+          confidence: 0.90,
+          reasoning: "Customer provided a clear commitment to pay on a specific date.",
+          promisedDate: "2026-08-28", // Deterministic mock target date
+        };
+      }
     } else if (text.includes("give me until") || text.includes("delay") || text.includes("next week") || text.includes("monday")) {
+      const pastBroken = input.historicalContext?.pastBrokenPromises || 0;
       rawOutput = {
         intent: "REQUEST_DELAY",
-        confidence: 0.88,
+        confidence: pastBroken >= 2 ? 0.45 : 0.88, // Lower confidence if they have broken promises
+        reasoning: pastBroken >= 2 ? `Delay requested, but customer has ${pastBroken} past broken promises.` : "Customer is requesting an extension or delay.",
         promisedDate: "2026-08-31", // Deterministic mock target date
       };
     } else if (text.includes("maybe") || text.includes("not sure") || text.includes("check later")) {
       rawOutput = {
         intent: "UNKNOWN",
         confidence: 0.40,
+        reasoning: "Customer response is non-committal or uncertain.",
         promisedDate: null,
       };
     } else {
       rawOutput = {
         intent: "UNKNOWN",
         confidence: 0.20,
+        reasoning: "Unable to determine clear payment intent from message.",
         promisedDate: null,
       };
     }

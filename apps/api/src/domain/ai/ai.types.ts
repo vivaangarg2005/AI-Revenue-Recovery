@@ -39,11 +39,17 @@ export interface P2PExtractionInput {
   message: string;
   currentDate?: string;
   customerTimezone?: string;
+  customerId?: string;
+  historicalContext?: {
+    pastBrokenPromises?: number;
+    historicalSuccessRate?: number;
+  };
 }
 
 export interface P2PExtractionOutput {
   intent: P2PIntent;
   confidence: number;
+  reasoning: string;
   promisedDate: string | null;
 }
 

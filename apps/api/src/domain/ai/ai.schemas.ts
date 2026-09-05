@@ -53,11 +53,19 @@ export const P2PExtractionInputSchema = z.object({
   message: z.string().min(1),
   currentDate: z.string().optional(),
   customerTimezone: z.string().optional().default("Asia/Kolkata"),
+  customerId: z.string().optional(),
+  historicalContext: z
+    .object({
+      pastBrokenPromises: z.number().int().min(0).optional().default(0),
+      historicalSuccessRate: z.number().min(0).max(1).optional().default(1),
+    })
+    .optional(),
 });
 
 export const P2PExtractionOutputSchema = z.object({
   intent: P2PIntentEnum,
   confidence: z.number().min(0).max(1),
+  reasoning: z.string().min(1),
   promisedDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be ISO format YYYY-MM-DD")

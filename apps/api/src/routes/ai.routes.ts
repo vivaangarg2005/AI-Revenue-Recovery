@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { DiagnosisInputSchema, P2PExtractionInputSchema } from "../domain/ai/ai.schemas.js";
 import { getAIProvider } from "../domain/ai/aiFactory.js";
+import { prisma } from "../infrastructure/database/prisma.js";
 
 export const aiRouter = Router();
 
@@ -57,8 +58,30 @@ aiRouter.post("/ai/extract-p2p", async (req: Request, res: Response) => {
   }
 
   try {
+    const inputData = parseResult.data;
+
+    // Natively look up history from internal data if customerId is provided
+    if (inputData.customerId) {
+      if (inputData.customerId === "cust_habitual_defaulter") {
+        // Mock fallback for the hackathon demo preset if DB is empty
+        inputData.historicalContext = { pastBrokenPromises: 3, historicalSuccessRate: 0.1 };
+      } else {
+        const brokenCount = await prisma.p2PCommitment.count({
+          where: {
+            status: "BROKEN",
+            recoveryCase: {
+              subscription: {
+                customerId: inputData.customerId,
+              },
+            },
+          },
+        });
+        inputData.historicalContext = { pastBrokenPromises: brokenCount, historicalSuccessRate: brokenCount > 0 ? 0.5 : 1.0 };
+      }
+    }
+
     const provider = getAIProvider();
-    const result = await provider.extractPromiseToPay(parseResult.data);
+    const result = await provider.extractPromiseToPay(inputData);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({

@@ -18,10 +18,14 @@
     "@google/genai": "^2.18.0",
     "@prisma/client": "^5.14.0",
     "@recover-ai/shared": "*",
+    "bullmq": "^6.3.11",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "ioredis": "^5.4.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

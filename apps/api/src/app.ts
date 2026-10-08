@@ -7,6 +7,7 @@ import { policyRouter } from "./routes/policy.routes.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { recoveryRouter } from "./routes/recovery.routes.js";
 import { simulationRouter } from "./routes/simulation.routes.js";
+import { logger } from "./utils/logger.js";
 
 export const app = express();
 
@@ -14,6 +15,17 @@ const allowedOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 
 app.use(cors({ origin: allowedOrigin }));
 app.use(express.json({ limit: "100kb" }));
+
+// Request Logging Middleware
+app.use((req, res, next) => {
+  const reqId = req.headers["x-correlation-id"] || "unknown";
+  logger.http(`Incoming Request`, { 
+    method: req.method, 
+    path: req.path, 
+    correlationId: reqId 
+  });
+  next();
+});
 
 export function requireApiKey(
   req: express.Request,

@@ -7,6 +7,7 @@ import { RecoveryService } from "../domain/recovery/RecoveryService.js";
 import { getAIProvider } from "../domain/ai/aiFactory.js";
 import { serializeBigInt } from "../utils/bigintSerializer.js";
 import { canTransition } from "../domain/fsm/fsm.js";
+import { enqueueRecoveryJob } from "../infrastructure/queue/recovery.queue.js";
 
 export const recoveryRouter = Router();
 
@@ -255,32 +256,14 @@ recoveryRouter.post(
     const { id } = req.params;
 
     try {
-      const result = await RecoveryService.runRecoveryWorkflow(id);
+      // Enqueue job via BullMQ instead of running synchronously
+      await enqueueRecoveryJob(id, `corr_${crypto.randomBytes(8).toString("hex")}`);
 
-      // Return the full enriched case with all audit events, diagnosis, and transitions
-      const fullCase = await prisma.recoveryCase.findUnique({
-        where: { id },
-        include: {
-          subscription: {
-            include: { customer: true },
-          },
-          invoice: true,
-          AIDiagnosis: { orderBy: { createdAt: "desc" } },
-          PolicyDecision: { orderBy: { createdAt: "desc" } },
-          RecoveryAction: { orderBy: { createdAt: "desc" } },
-          FailureEvent: { orderBy: { occurredAt: "desc" } },
-          P2PCommitment: { orderBy: { createdAt: "desc" } },
-          FSMTransition: { orderBy: { createdAt: "asc" } },
-          AuditEvent: { orderBy: { createdAt: "asc" } },
-        },
+      res.status(202).json({
+        message: "Recovery job enqueued successfully",
+        caseId: id,
+        status: "PROCESSING"
       });
-
-      res.json(
-        serializeBigInt({
-          ...(fullCase || {}),
-          ...result,
-        }),
-      );
     } catch (err: any) {
       const memCase = inMemoryCases.get(id);
       if (memCase) {

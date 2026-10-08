@@ -1,40 +1,31 @@
 import { z } from "zod";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 
+// Load .env (local development fallback)
 dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z
-    .enum(["development", "test", "production"])
+    .enum(["development", "production", "test"])
     .default("development"),
-  PORT: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .default("4000"),
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
-  DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().default("redis://localhost:6379"),
-  OPENAI_API_KEY: z.string().default("sk-proj-placeholder"),
-  OPENAI_MODEL: z.string().default("gpt-4o-mini"),
-  RAZORPAY_KEY_ID: z.string().default("rzp_test_placeholder"),
-  RAZORPAY_KEY_SECRET: z.string().default("placeholder_secret"),
-  RAZORPAY_WEBHOOK_SECRET: z.string().default("whsec_placeholder"),
-  POLICY_MAX_DISCOUNT_PERCENT: z
-    .string()
-    .transform((val) => parseFloat(val))
-    .default("5.0"),
-  POLICY_MAX_RETRIES: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .default("3"),
-  POLICY_DND_START_HOUR: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .default("9"),
-  POLICY_DND_END_HOUR: z
-    .string()
-    .transform((val) => parseInt(val, 10))
-    .default("20"),
+  PORT: z.coerce.number().default(4000),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  REDIS_URL: z.string().min(1, "REDIS_URL is required"),
+  GEMINI_API_KEY: z.string().optional(),
+  LOG_LEVEL: z.enum(["error", "warn", "info", "http", "verbose", "debug", "silly"]).default("info"),
+  AWS_REGION: z.string().optional(),
+  AI_MODE: z.enum(["gemini", "mock"]).default("mock"),
+  POLICY_MAX_RETRIES: z.coerce.number().default(3),
+  POLICY_MAX_DISCOUNT_PERCENT: z.coerce.number().default(5.0),
+  POLICY_DND_START_HOUR: z.coerce.number().default(9),
+  POLICY_DND_END_HOUR: z.coerce.number().default(20),
 });
 
-export const env = envSchema.parse(process.env);
+const _env = envSchema.safeParse(process.env);
+
+if (!_env.success) {
+  console.error("❌ Invalid environment variables:", _env.error.format());
+  process.exit(1);
+}
+
+export const env = _env.data;

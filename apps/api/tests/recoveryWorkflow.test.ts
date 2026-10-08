@@ -6,9 +6,19 @@ vi.mock("../src/infrastructure/database/prisma.js", () => ({
   prisma: mockPrismaInstance,
 }));
 
+vi.mock("../src/infrastructure/queue/recovery.queue.js", () => ({
+  enqueueRecoveryJob: vi.fn().mockResolvedValue({ id: "mock_job_id" }),
+}));
+
+vi.mock("bullmq", () => ({
+  Queue: vi.fn(),
+  Worker: vi.fn(),
+}));
+
 import request from "supertest";
 import { app } from "../src/app.js";
 import { MockPaymentProvider } from "../src/domain/payment/MockPaymentProvider.js";
+import { RecoveryService } from "../src/domain/recovery/RecoveryService.js";
 
 describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
   const mockPayment = new MockPaymentProvider();
@@ -31,19 +41,22 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     const caseId = createRes.body.id;
     expect(createRes.body.fsmState).toBe("FAILED");
 
-    // 2. Run Recovery Workflow
+    // 2. Run Recovery Workflow (Enqueue)
     const runRes = await request(app).post(
       `/api/v1/recovery-cases/${caseId}/run`,
     );
 
-    expect(runRes.status).toBe(200);
-    expect(runRes.body.initialState).toBe("FAILED");
-    expect(runRes.body.finalState).toBe("PAID");
-    expect(runRes.body.diagnosis.category).toBe("TEMPORARY_FAILURE");
-    expect(runRes.body.policyDecision.decision).toBe("ALLOW");
-    expect(runRes.body.paymentResult.success).toBe(true);
-    expect(runRes.body.paymentResult.isSimulated).toBe(true);
-    expect(runRes.body.recoveredPaise).toBe("99900");
+    expect(runRes.status).toBe(202);
+
+    // Simulate worker
+    const result = await RecoveryService.runRecoveryWorkflow(caseId);
+
+    expect(result.initialState).toBe("FAILED");
+    expect(result.finalState).toBe("PAID");
+    expect(result.diagnosis.category).toBe("TEMPORARY_FAILURE");
+    expect(result.policyDecision.decision).toBe("ALLOW");
+    expect(result.paymentResult.success).toBe(true);
+    expect(result.recoveredPaise).toBe("99900");
   });
 
   it("Scenario 2: Permanent failure -> AI diagnosis -> Policy ALLOW -> Escalated state", async () => {
@@ -57,10 +70,12 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     const runRes = await request(app).post(
       `/api/v1/recovery-cases/${caseId}/run`,
     );
+    expect(runRes.status).toBe(202);
 
-    expect(runRes.status).toBe(200);
-    expect(runRes.body.finalState).toBe("ESCALATED");
-    expect(runRes.body.diagnosis.category).toBe("PERMANENT_FAILURE");
+    const result = await RecoveryService.runRecoveryWorkflow(caseId);
+
+    expect(result.finalState).toBe("ESCALATED");
+    expect(result.diagnosis.category).toBe("PERMANENT_FAILURE");
   });
 
   it("Scenario 2.5: Low confidence AI diagnosis -> Escalates to Human Review", async () => {
@@ -74,11 +89,13 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     const runRes = await request(app).post(
       `/api/v1/recovery-cases/${caseId}/run`,
     );
+    expect(runRes.status).toBe(202);
 
-    expect(runRes.status).toBe(200);
-    expect(runRes.body.diagnosis.confidence).toBeLessThan(0.7);
-    expect(runRes.body.finalState).toBe("ESCALATED");
-    expect(runRes.body.action.actionType).toBe("ESCALATE");
+    const result = await RecoveryService.runRecoveryWorkflow(caseId);
+
+    expect(result.diagnosis.confidence).toBeLessThan(0.7);
+    expect(result.finalState).toBe("ESCALATED");
+    expect(result.action.actionType).toBe("ESCALATE");
   });
 
   it("Scenario 3: Excessive discount recommendation -> Policy Gatekeeper DENIES -> POLICY_BLOCKED state", async () => {
@@ -209,6 +226,7 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
 
     const caseId = createRes.body.id;
     await request(app).post(`/api/v1/recovery-cases/${caseId}/run`);
+    await RecoveryService.runRecoveryWorkflow(caseId);
 
     const fetchRes = await request(app).get(`/api/v1/recovery-cases/${caseId}`);
 

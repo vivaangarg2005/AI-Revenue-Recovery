@@ -125,19 +125,14 @@ export class RecoveryService {
       },
     });
 
-    await this.createAuditEvent(
-      caseId,
-      "AI_DIAGNOSIS_COMPLETED",
-      { diagnosisId: diagnosisRecord.id, category: diagnosisResult.category },
-      correlationId,
-    );
-
     // STEP 3: DIAGNOSING -> DIAGNOSED
     await this.updateCaseState(
       caseId,
       FSMState.DIAGNOSED,
       "AI_DIAGNOSIS_DONE",
       correlationId,
+      "AI_DIAGNOSIS_COMPLETED",
+      { diagnosisId: diagnosisRecord.id, category: diagnosisResult.category }
     );
 
     // STEP 4: Action Mapping
@@ -185,17 +180,13 @@ export class RecoveryService {
 
     // STEP 6: Handle Policy DENIED
     if (!policyDecision.allowed) {
-      await this.createAuditEvent(
-        caseId,
-        "ACTION_DENIED",
-        { violations: policyDecision.violations },
-        correlationId,
-      );
       await this.updateCaseState(
         caseId,
         FSMState.POLICY_BLOCKED,
         "POLICY_DENIED",
         correlationId,
+        "ACTION_DENIED",
+        { violations: policyDecision.violations }
       );
 
       return {
@@ -214,17 +205,13 @@ export class RecoveryService {
     }
 
     // STEP 7: Policy ALLOWED -> Transition to ACTION_AUTHORIZED
-    await this.createAuditEvent(
-      caseId,
-      "ACTION_AUTHORIZED",
-      { action: proposedActionType },
-      correlationId,
-    );
     await this.updateCaseState(
       caseId,
       FSMState.ACTION_AUTHORIZED,
       "POLICY_ALLOWED",
       correlationId,
+      "ACTION_AUTHORIZED",
+      { action: proposedActionType }
     );
 
     const actionIdempotencyKey = `${caseId}_act_${Date.now()}`;
@@ -247,17 +234,13 @@ export class RecoveryService {
         where: { id: actionRecord.id },
         data: { executionStatus: "COMPLETED" },
       });
-      await this.createAuditEvent(
-        caseId,
-        "RECOVERY_ESCALATED",
-        { reason: "AI/Policy Escalation" },
-        correlationId,
-      );
       await this.updateCaseState(
         caseId,
         FSMState.ESCALATED,
         "HUMAN_ESCALATION_REQUIRED",
         correlationId,
+        "RECOVERY_ESCALATED",
+        { reason: "AI/Policy Escalation" }
       );
 
       return {
@@ -396,12 +379,8 @@ export class RecoveryService {
         FSMState.HALTED,
         "PAYMENT_FAILED",
         correlationId,
-      );
-      await this.createAuditEvent(
-        caseId,
         "PAYMENT_FAILED",
-        { reason: paymentResult.failureReason },
-        correlationId,
+        { reason: paymentResult.failureReason }
       );
 
       return {
@@ -423,14 +402,13 @@ export class RecoveryService {
     }
   }
 
-  /**
-   * Helper to safely update Case state in Prisma and log FSMTransitions.
-   */
   private static async updateCaseState(
     caseId: string,
     toState: FSMState,
     trigger: string,
     correlationId: string,
+    auditEventType?: string,
+    auditPayload?: Record<string, any>
   ) {
     const currentCase = await prisma.recoveryCase.findUnique({
       where: { id: caseId },
@@ -444,20 +422,38 @@ export class RecoveryService {
       throw new Error(`Forbidden FSM transition: ${fromState} -> ${toState}`);
     }
 
-    await prisma.recoveryCase.update({
-      where: { id: caseId },
-      data: { fsmState: toState },
-    });
+    await prisma.$transaction(async (tx) => {
+      await tx.recoveryCase.update({
+        where: { id: caseId },
+        data: { fsmState: toState },
+      });
+      await tx.fSMTransition.create({
+        data: {
+          caseId,
+          fromState,
+          toState,
+          trigger,
+          actor: "SYSTEM",
+          correlationId,
+        },
+      });
 
-    await prisma.fSMTransition.create({
-      data: {
-        caseId,
-        fromState,
-        toState,
-        trigger,
-        actor: "SYSTEM",
-        correlationId,
-      },
+      if (auditEventType && auditPayload) {
+        await tx.auditEvent.create({
+          data: {
+            caseId,
+            eventType: auditEventType,
+            actor: "SYSTEM",
+            payload: auditPayload,
+            previousHash: "genesis",
+            currentHash: crypto
+              .createHash("sha256")
+              .update(`${caseId}:${auditEventType}:${Date.now()}`)
+              .digest("hex"),
+            correlationId,
+          },
+        });
+      }
     });
   }
 

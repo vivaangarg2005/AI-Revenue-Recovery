@@ -45,7 +45,7 @@ export function App() {
                   SIMULATION MODE
                 </span>
                 <span className="px-2 py-0.5 rounded-md text-[10px] bg-slate-800/50 text-slate-400 border border-slate-700/50 hidden sm:inline-block font-medium">
-                  TRACK 03
+                  ENTERPRISE
                 </span>
               </div>
               <p className="text-sm text-slate-400 mt-0.5">

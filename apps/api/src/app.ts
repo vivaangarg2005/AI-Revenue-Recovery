@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { healthRouter } from "./routes/health.routes.js";
@@ -15,6 +16,17 @@ const allowedOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 
 app.use(cors({ origin: allowedOrigin }));
 app.use(express.json({ limit: "100kb" }));
+
+// Rate Limiting Middleware
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  message: { error: "Too many requests, please try again later." },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+app.use("/api/", apiLimiter);
 
 // Request Logging Middleware
 app.use((req, res, next) => {

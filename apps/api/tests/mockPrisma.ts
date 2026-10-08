@@ -256,15 +256,28 @@ class InMemoryPrisma {
   };
 
   $transaction = async (args: any) => {
-    if (typeof args === "function") {
-      return args(this);
-    }
-    if (Array.isArray(args)) {
-      const results = [];
-      for (const op of args) {
-        results.push(await op);
+    const snapshot = {
+      recoveryCases: new Map(this.recoveryCases),
+      fsmTransitions: [...this.fsmTransitions],
+      auditEvents: [...this.auditEvents]
+    };
+
+    try {
+      if (typeof args === "function") {
+        return await args(this);
       }
-      return results;
+      if (Array.isArray(args)) {
+        const results = [];
+        for (const op of args) {
+          results.push(await op);
+        }
+        return results;
+      }
+    } catch (err) {
+      this.recoveryCases = snapshot.recoveryCases;
+      this.fsmTransitions = snapshot.fsmTransitions;
+      this.auditEvents = snapshot.auditEvents;
+      throw err;
     }
   };
   $queryRaw = async () => [{ 1: 1 }];

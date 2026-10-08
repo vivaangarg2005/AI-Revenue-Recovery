@@ -2,7 +2,7 @@
   "name": "recover-ai-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Autonomous, policy-bounded AI subscription revenue recovery engine for Razorpay AI Buildathon Track 03",
+  "description": "Autonomous, policy-bounded AI subscription revenue recovery engine",
   "workspaces": [
     "apps/*",
     "packages/*"

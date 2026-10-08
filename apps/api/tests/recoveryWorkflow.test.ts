@@ -238,4 +238,25 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     expect(fetchRes.body.FSMTransition.length).toBeGreaterThan(0);
     expect(fetchRes.body.AuditEvent.length).toBeGreaterThan(0);
   });
+
+  it("Scenario 11: Transaction Rollback on AuditEvent Failure", async () => {
+    const createRes = await request(app).post("/api/v1/recovery-cases").send({
+      failureCode: "GATEWAY_TIMEOUT",
+      failureMessage: "Timeout error",
+      amountPaise: 99900,
+    });
+    const caseId = createRes.body.id;
+
+    // Force audit event creation to throw during the DIAGNOSING transition
+    vi.spyOn(mockPrismaInstance.auditEvent, "create").mockRejectedValueOnce(new Error("Simulated DB Error"));
+
+    await expect(RecoveryService.runRecoveryWorkflow(caseId)).rejects.toThrow("Simulated DB Error");
+
+    // Fetch the case directly from the database and ensure the state hasn't changed (transaction rolled back)
+    const dbCase = await mockPrismaInstance.recoveryCase.findUnique({ where: { id: caseId } });
+    expect(dbCase?.fsmState).toBe("DIAGNOSING"); // Should remain in DIAGNOSING, not transition to DIAGNOSED
+
+    // Restore
+    vi.restoreAllMocks();
+  });
 });

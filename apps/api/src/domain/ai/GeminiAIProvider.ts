@@ -30,6 +30,32 @@ export class GeminiAIProvider implements AIProvider {
     this.fallbackMock = new MockAIProvider();
   }
 
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries = 3,
+    initialDelayMs = 1000
+  ): Promise<T> {
+    let lastError: any;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (err: any) {
+        lastError = err;
+        const isRateLimit = err.status === 429 || err.message?.includes("429");
+        const isServerError = err.status >= 500 || err.message?.includes("503") || err.message?.includes("500");
+        
+        if (!isRateLimit && !isServerError) {
+          throw err; // Don't retry non-transient errors
+        }
+        
+        const delay = initialDelayMs * Math.pow(2, i);
+        console.warn(`[GeminiAIProvider] API error (${err.message}). Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    throw lastError;
+  }
+
   /**
    * Diagnoses payment failure using Gemini structured generation with safe fallback.
    */
@@ -63,13 +89,13 @@ Return ONLY a JSON object matching this exact schema:
 `;
 
     try {
-      const response = await this.ai.models.generateContent({
+      const response = await this.executeWithRetry(() => this.ai.models.generateContent({
         model: this.modelName,
         contents: prompt,
         config: {
           responseMimeType: "application/json",
         },
-      });
+      }));
 
       const text = response.text || "{}";
       console.log("\n================================================");
@@ -145,13 +171,13 @@ Return ONLY a JSON object matching this exact schema:
 `;
 
     try {
-      const response = await this.ai.models.generateContent({
+      const response = await this.executeWithRetry(() => this.ai.models.generateContent({
         model: this.modelName,
         contents: prompt,
         config: {
           responseMimeType: "application/json",
         },
-      });
+      }));
 
       const text = response.text || "{}";
       console.log("\n================================================");

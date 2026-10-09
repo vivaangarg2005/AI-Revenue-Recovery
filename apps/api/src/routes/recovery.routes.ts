@@ -257,8 +257,7 @@ recoveryRouter.post(
 
     try {
       // For the demo, run it synchronously so the UI gets the full updated case immediately
-      const service = new RecoveryService(getAIProvider());
-      const updatedCase = await service.runWorkflow(id, `corr_${crypto.randomBytes(8).toString("hex")}`);
+      await RecoveryService.runRecoveryWorkflow(id);
 
       const fullCase = await prisma.recoveryCase.findUnique({
         where: { id },

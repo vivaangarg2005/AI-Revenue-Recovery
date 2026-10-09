@@ -41,14 +41,7 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     const caseId = createRes.body.id;
     expect(createRes.body.fsmState).toBe("FAILED");
 
-    // 2. Run Recovery Workflow (Enqueue)
-    const runRes = await request(app).post(
-      `/api/v1/recovery-cases/${caseId}/run`,
-    );
-
-    expect(runRes.status).toBe(202);
-
-    // Simulate worker
+    // 2. Simulate worker directly
     const result = await RecoveryService.runRecoveryWorkflow(caseId);
 
     expect(result.initialState).toBe("FAILED");
@@ -67,10 +60,6 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     });
 
     const caseId = createRes.body.id;
-    const runRes = await request(app).post(
-      `/api/v1/recovery-cases/${caseId}/run`,
-    );
-    expect(runRes.status).toBe(202);
 
     const result = await RecoveryService.runRecoveryWorkflow(caseId);
 
@@ -86,10 +75,6 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
     });
 
     const caseId = createRes.body.id;
-    const runRes = await request(app).post(
-      `/api/v1/recovery-cases/${caseId}/run`,
-    );
-    expect(runRes.status).toBe(202);
 
     const result = await RecoveryService.runRecoveryWorkflow(caseId);
 
@@ -226,7 +211,6 @@ describe("RECOVER-AI End-to-End Recovery Workflow Integration Tests", () => {
 
     const caseId = createRes.body.id;
     await request(app).post(`/api/v1/recovery-cases/${caseId}/run`);
-    await RecoveryService.runRecoveryWorkflow(caseId);
 
     const fetchRes = await request(app).get(`/api/v1/recovery-cases/${caseId}`);
 

@@ -12,6 +12,7 @@
     "db:validate": "npx --no-install prisma validate",
     "db:generate": "npx --no-install prisma generate",
     "db:migrate": "npx --no-install prisma migrate dev",
+    "db:push": "npx --no-install prisma db push",
     "db:seed": "npx --no-install tsx prisma/seed.ts"
   },
   "dependencies": {

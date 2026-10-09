@@ -256,14 +256,26 @@ recoveryRouter.post(
     const { id } = req.params;
 
     try {
-      // Enqueue job via BullMQ instead of running synchronously
-      await enqueueRecoveryJob(id, `corr_${crypto.randomBytes(8).toString("hex")}`);
+      // For the demo, run it synchronously so the UI gets the full updated case immediately
+      const service = new RecoveryService(getAIProvider());
+      const updatedCase = await service.runWorkflow(id, `corr_${crypto.randomBytes(8).toString("hex")}`);
 
-      res.status(202).json({
-        message: "Recovery job enqueued successfully",
-        caseId: id,
-        status: "PROCESSING"
+      const fullCase = await prisma.recoveryCase.findUnique({
+        where: { id },
+        include: {
+          subscription: { include: { customer: true } },
+          invoice: true,
+          FailureEvent: true,
+          AIDiagnosis: { orderBy: { createdAt: "desc" } },
+          PolicyDecision: { orderBy: { createdAt: "desc" } },
+          RecoveryAction: { orderBy: { createdAt: "desc" } },
+          P2PCommitment: { orderBy: { createdAt: "desc" } },
+          FSMTransition: { orderBy: { createdAt: "asc" } },
+          AuditEvent: { orderBy: { createdAt: "asc" } },
+        },
       });
+
+      res.status(200).json(serializeBigInt(fullCase));
     } catch (err: any) {
       const memCase = inMemoryCases.get(id);
       if (memCase) {

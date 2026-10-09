@@ -34,3 +34,6 @@ jobs:
       
     - name: Run Tests
       run: npm test
+      env:
+        DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+        REDIS_URL: "redis://localhost:6379"

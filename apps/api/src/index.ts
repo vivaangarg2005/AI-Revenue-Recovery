@@ -4,7 +4,7 @@ import { prisma } from "./infrastructure/database/prisma.js";
 import { getRedisClient } from "./infrastructure/redis/redis.js";
 import { logger } from "./utils/logger.js";
 import { setupSwagger } from "./config/swagger.js";
-import "./infrastructure/queue/recovery.worker.js";
+// import "./infrastructure/queue/recovery.worker.js";
 
 // Setup Swagger API Docs
 setupSwagger(app);

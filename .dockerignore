@@ -1,0 +1,4 @@
+aws-infra/cdk.out
+aws-infra/cdk.out/**
+node_modules
+.git

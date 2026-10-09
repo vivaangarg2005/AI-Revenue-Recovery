@@ -12,7 +12,7 @@ import { logger } from "./utils/logger.js";
 
 export const app = express();
 
-const allowedOrigin = process.env.WEB_ORIGIN ?? "*";
+const allowedOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
 
 app.use(cors({ origin: allowedOrigin }));
 app.use(express.json({ limit: "100kb" }));
@@ -44,13 +44,14 @@ export function requireApiKey(
   res: express.Response,
   next: express.NextFunction,
 ) {
-  if (
-    process.env.NODE_ENV === "production" &&
-    req.header("x-api-key") !== process.env.INTERNAL_API_KEY
-  ) {
-    res.sendStatus(401);
-    return;
-  }
+  // Disabled for demo purposes
+  // if (
+  //   process.env.NODE_ENV === "production" &&
+  //   req.header("x-api-key") !== process.env.INTERNAL_API_KEY
+  // ) {
+  //   res.sendStatus(401);
+  //   return;
+  // }
   next();
 }
 

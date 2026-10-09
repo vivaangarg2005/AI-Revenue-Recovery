@@ -28,3 +28,10 @@ yarn-error.log*
 
 # Prisma generated
 apps/api/prisma/migrations/dev/
+
+# AWS CDK Output
+cdk.out/
+aws-infra/cdk*.out/
+aws-infra-clean/
+aws-infra/template.json
+aws-infra/package-lock.json

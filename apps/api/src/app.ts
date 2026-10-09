@@ -12,7 +12,7 @@ import { logger } from "./utils/logger.js";
 
 export const app = express();
 
-const allowedOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+const allowedOrigin = process.env.WEB_ORIGIN ?? "*";
 
 app.use(cors({ origin: allowedOrigin }));
 app.use(express.json({ limit: "100kb" }));

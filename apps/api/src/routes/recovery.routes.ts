@@ -7,7 +7,7 @@ import { RecoveryService } from "../domain/recovery/RecoveryService.js";
 import { getAIProvider } from "../domain/ai/aiFactory.js";
 import { serializeBigInt } from "../utils/bigintSerializer.js";
 import { canTransition } from "../domain/fsm/fsm.js";
-import { enqueueRecoveryJob } from "../infrastructure/queue/recovery.queue.js";
+
 
 export const recoveryRouter = Router();
 
